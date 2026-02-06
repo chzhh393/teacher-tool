@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
 import Modal from "../../components/Modal"
@@ -116,6 +116,26 @@ const getStatus = (record: ActivationRecord) => {
   if (revoked) return "revoked"
   if (used) return "used"
   return "unused"
+}
+
+const CodeChip = ({ code, writeClipboard }: { code: string; writeClipboard: (t: string) => Promise<boolean> }) => {
+  const [label, setLabel] = useState(code)
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const handleClick = async () => {
+    const ok = await writeClipboard(code)
+    clearTimeout(timerRef.current)
+    setLabel(ok ? "已复制 ✓" : "失败")
+    timerRef.current = setTimeout(() => setLabel(code), 1500)
+  }
+  return (
+    <button
+      type="button"
+      className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-indigo-700"
+      onClick={handleClick}
+    >
+      {label}
+    </button>
+  )
 }
 
 const ActivationAdmin = () => {
@@ -247,19 +267,41 @@ const ActivationAdmin = () => {
     URL.revokeObjectURL(url)
   }
 
+  const [copyLabel, setCopyLabel] = useState("复制全部")
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+
+  const writeClipboard = useCallback(async (text: string): Promise<boolean> => {
+    // 1. 优先使用 Clipboard API
+    try {
+      await navigator.clipboard.writeText(text)
+      return true
+    } catch {
+      // ignored
+    }
+    // 2. 回退：textarea + execCommand
+    try {
+      const ta = document.createElement("textarea")
+      ta.value = text
+      ta.style.position = "fixed"
+      ta.style.left = "-9999px"
+      document.body.appendChild(ta)
+      ta.focus()
+      ta.select()
+      const ok = document.execCommand("copy")
+      document.body.removeChild(ta)
+      return ok
+    } catch {
+      return false
+    }
+  }, [])
+
   const copyCodes = async () => {
     if (!generatedCodes.length) return
     const text = generatedCodes.join("\n")
-    try {
-      await navigator.clipboard.writeText(text)
-    } catch {
-      const textArea = document.createElement("textarea")
-      textArea.value = text
-      document.body.appendChild(textArea)
-      textArea.select()
-      document.execCommand("copy")
-      document.body.removeChild(textArea)
-    }
+    const ok = await writeClipboard(text)
+    clearTimeout(copyTimerRef.current)
+    setCopyLabel(ok ? "已复制 ✓" : "复制失败")
+    copyTimerRef.current = setTimeout(() => setCopyLabel("复制全部"), 2000)
   }
 
   const renderStatus = (record: ActivationRecord) => {
@@ -557,21 +599,14 @@ const ActivationAdmin = () => {
               关闭
             </button>
             <button type="button" className="btn-active" onClick={copyCodes}>
-              复制全部
+              {copyLabel}
             </button>
           </>
         }
       >
         <div className="flex flex-wrap gap-2">
           {generatedCodes.map((code) => (
-            <button
-              key={code}
-              type="button"
-              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-indigo-700"
-              onClick={() => navigator.clipboard.writeText(code)}
-            >
-              {code}
-            </button>
+            <CodeChip key={code} code={code} writeClipboard={writeClipboard} />
           ))}
         </div>
       </Modal>

@@ -43,8 +43,7 @@ exports.main = async (event = {}) => {
   const pageSize = Number(event.pageSize || 20)
   const skip = (page - 1) * pageSize
 
-  // 获取所有记录然后过滤（因为数据可能在 data 嵌套中）
-  const allRecordsResult = await db.collection("TT_redeem_records").get()
+  const allRecordsResult = await db.collection("TT_redeem_records").where({ "data.classId": classId }).limit(1000).get()
   const allRecords = (allRecordsResult.data || [])
     .map((item) => {
       const raw = item.data || item
@@ -55,7 +54,6 @@ exports.main = async (event = {}) => {
         createdAt: formatDate(raw.createdAt),
       }
     })
-    .filter((item) => item.classId === classId)
     .sort((a, b) => {
       const timeA = a.createdAt || ""
       const timeB = b.createdAt || ""

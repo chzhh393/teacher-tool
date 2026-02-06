@@ -19,10 +19,9 @@ exports.main = async (event = {}) => {
     return { ranks: [] }
   }
 
-  const result = await db.collection("TT_students").get()
+  const result = await db.collection("TT_students").where({ "data.classId": classId }).limit(1000).get()
   const students = (result.data || [])
     .map((item) => item.data || item)
-    .filter((item) => item.classId === classId)
 
   const ranks = students
     .sort((a, b) => {

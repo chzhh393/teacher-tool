@@ -58,10 +58,9 @@ exports.main = async (event = {}) => {
   const classRow = classDoc.data?.[0]
   const className = classRow?.name || classRow?.data?.name || "班级"
 
-  const studentsResult = await db.collection("TT_students").get()
+  const studentsResult = await db.collection("TT_students").where({ "data.classId": classId }).limit(1000).get()
   const students = (studentsResult.data || [])
     .map((item) => item.data || item)
-    .filter((item) => item.classId === classId)
   const studentCount = students.length
   const totalBadges = students.reduce((sum, item) => sum + (item.badges || 0), 0)
   const totalScore = students.reduce((sum, item) => sum + (item.totalScore || 0), 0)

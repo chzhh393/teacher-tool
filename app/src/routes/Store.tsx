@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react"
 
 import Modal from "../components/Modal"
-import { shopItems as mockItems, students as mockStudents } from "../data/mock"
 import { CloudApi } from "../services/cloudApi"
 import { useClassStore } from "../stores/classStore"
 import type { RedeemRecord, ShopItem, Student } from "../types"
@@ -9,8 +8,8 @@ import { normalizeRedeemRecords, normalizeShopItems, normalizeStudents } from ".
 
 const Store = () => {
   const [tab, setTab] = useState<"items" | "records">("items")
-  const [items, setItems] = useState<ShopItem[]>(mockItems)
-  const [students, setStudents] = useState<Student[]>(mockStudents)
+  const [items, setItems] = useState<ShopItem[]>([])
+  const [students, setStudents] = useState<Student[]>([])
   const [records, setRecords] = useState<RedeemRecord[]>([])
   const [selectedItem, setSelectedItem] = useState<ShopItem | null>(null)
   const [selectedStudentId, setSelectedStudentId] = useState("")
@@ -26,8 +25,8 @@ const Store = () => {
         CloudApi.studentList({ classId }),
         CloudApi.redeemList({ classId, page: 1, pageSize: 50 }),
       ])
-      setItems(normalizeShopItems(itemResult.items || mockItems))
-      setStudents(normalizeStudents(studentResult.students || mockStudents))
+      setItems(normalizeShopItems(itemResult.items || []))
+      setStudents(normalizeStudents(studentResult.students || []))
       setRecords(normalizeRedeemRecords(recordResult.records || []))
     } finally {
       setLoading(false)

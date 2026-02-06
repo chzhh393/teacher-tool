@@ -44,11 +44,9 @@ exports.main = async (event = {}) => {
     return { csvUrl: "" }
   }
 
-  // 获取所有记录然后过滤（因为数据可能在 data 嵌套中）
-  const allResult = await db.collection("TT_score_records").get()
+  const allResult = await db.collection("TT_score_records").where({ "data.classId": classId }).limit(1000).get()
   const records = (allResult.data || [])
     .map((item) => item.data || item)
-    .filter((item) => item.classId === classId)
     .sort((a, b) => {
       const timeA = formatDate(a.createdAt)
       const timeB = formatDate(b.createdAt)

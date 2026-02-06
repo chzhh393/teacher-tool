@@ -1,5 +1,5 @@
 import { useEffect } from "react"
-import { BrowserRouter, Route, Routes } from "react-router-dom"
+import { HashRouter, Route, Routes } from "react-router-dom"
 
 import AppShell from "./components/AppShell"
 import RequireAuth from "./components/RequireAuth"
@@ -40,7 +40,7 @@ const App = () => {
   }, [token, setAuth, clearAuth, setStatus])
 
   return (
-    <BrowserRouter>
+    <HashRouter>
       <Routes>
         <Route path="/auth" element={<Auth />} />
         <Route path="/activate" element={<Activate />} />
@@ -56,7 +56,7 @@ const App = () => {
           </Route>
         </Route>
       </Routes>
-    </BrowserRouter>
+    </HashRouter>
   )
 }
 

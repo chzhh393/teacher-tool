@@ -48,10 +48,9 @@ exports.main = async (event = {}) => {
     return { students: [] }
   }
 
-  const result = await db.collection("TT_students").get()
+  const result = await db.collection("TT_students").where({ "data.classId": classId }).limit(1000).get()
   const students = (result.data || [])
     .map((item) => item.data || item)
-    .filter((item) => item.classId === classId)
     .map((item) => ({
       ...item,
       id: item.id || item._id || "",

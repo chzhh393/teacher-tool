@@ -26,7 +26,11 @@ exports.main = async (event = {}) => {
     return { classes: [] }
   }
 
-  const result = await db.collection("TT_classes").get()
+  const _ = db.command
+  const result = await db.collection("TT_classes").where(_.or([
+    { userId: user.userId },
+    { "data.userId": user.userId },
+  ])).limit(1000).get()
   const classes = (result.data || [])
     .map((item) => {
       const raw = item.data || item
@@ -38,7 +42,6 @@ exports.main = async (event = {}) => {
         userId: raw.userId || item.userId,
       }
     })
-    .filter((item) => !item.userId || item.userId === user.userId)
     .sort((a, b) => {
       const left = a.createdAt ? new Date(a.createdAt).getTime() : 0
       const right = b.createdAt ? new Date(b.createdAt).getTime() : 0

@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react"
+import { Link } from "react-router-dom"
 
 import BeastPickerModal from "../components/BeastPickerModal"
 import RevokeBar from "../components/RevokeBar"
 import ScoreModal from "../components/ScoreModal"
 import { beasts, type EvolutionStage } from "../data/beasts"
-import { scoreRules as mockRules } from "../data/mock"
 import { signInAnonymously } from "../lib/cloudbaseAuth"
 import { CloudApi } from "../services/cloudApi"
 import { useClassStore } from "../stores/classStore"
@@ -36,7 +36,7 @@ const stageNames: Record<EvolutionStage, string> = {
 const Home = () => {
   const [summary, setSummary] = useState<ClassSummary | null>(null)
   const [studentList, setStudentList] = useState<Student[]>([])
-  const [rules, setRules] = useState<ScoreRule[]>(mockRules)
+  const [rules, setRules] = useState<ScoreRule[]>([])
   const [search, setSearch] = useState("")
   const [isLoading, setIsLoading] = useState(true)
   const [batchMode, setBatchMode] = useState(false)
@@ -47,6 +47,7 @@ const Home = () => {
   const [lastRecordId, setLastRecordId] = useState<string | null>(null)
   const [lastMessage, setLastMessage] = useState<string>("")
   const [feedingIds, setFeedingIds] = useState<string[]>([])
+  const [notice, setNotice] = useState("")
   const { classId, setClass } = useClassStore()
 
   const filteredStudents = useMemo(() => {
@@ -76,11 +77,9 @@ const Home = () => {
       const settingsResult = await CloudApi.settingsGet({
         classId: summaryResult.classSummary?.id || activeClassId,
       })
-      if (settingsResult.settings) {
-        setRules(settingsResult.settings.scoreRules || mockRules)
-      }
+      setRules(settingsResult.settings?.scoreRules || [])
     } catch (error) {
-      setRules(mockRules)
+      setRules([])
     }
   }
 
@@ -236,12 +235,12 @@ const Home = () => {
         <div className="text-6xl mb-4">📚</div>
         <h2 className="text-xl font-bold text-text-primary mb-2">还没有班级</h2>
         <p className="text-sm text-text-secondary mb-6">请先在「老师设置」中创建班级</p>
-        <a
-          href="/settings"
+        <Link
+          to="/settings"
           className="btn-active px-6 py-2 text-sm"
         >
           前往创建班级
-        </a>
+        </Link>
       </div>
     )
   }

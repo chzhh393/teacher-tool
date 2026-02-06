@@ -71,43 +71,36 @@ exports.main = async (event = {}) => {
     const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, Number(event.pageSize) || 20))
     const skip = (page - 1) * pageSize
     const status = String(event.status || "")
-    const searchRaw = normalizeCode(event.search)
+    const keyword = String(event.search || "").toLowerCase().trim()
 
-    const isExactCode = CODE_REG.test(searchRaw)
-    let records = []
-    let total = 0
+    const allRecords = await listAll(collection)
 
-    if (!searchRaw || isExactCode) {
-      const query = {}
-      if (status === "used") query.used = true
-      if (status === "unused") query.used = false
-      if (status === "revoked") query.revoked = true
-      if (isExactCode) query.code = searchRaw
+    // 1. 关键词过滤
+    const searched = keyword
+      ? allRecords.filter((item) => {
+          const code = String(item.code || "").toLowerCase()
+          const batch = String(item.batchName || item.batch_name || "").toLowerCase()
+          return code.includes(keyword) || batch.includes(keyword)
+        })
+      : allRecords
 
-      let ref = Object.keys(query).length ? collection.where(query) : collection
-      const countResult = await ref.count()
-      total = countResult.total || 0
-      ref = ref.orderBy("createdAt", "desc").skip(skip).limit(pageSize)
-      const result = await ref.get()
-      records = (result.data || []).map(formatRow).filter(Boolean)
-    } else {
-      const allRecords = await listAll(collection)
-      const keyword = String(event.search || "").toLowerCase()
-      const filtered = allRecords.filter((item) => {
-        const code = String(item.code || "").toLowerCase()
-        const batch = String(item.batchName || item.batch_name || "").toLowerCase()
-        return code.includes(keyword) || batch.includes(keyword)
-      })
-      const statusFiltered = filtered.filter((item) => {
-        if (status === "used") return item.used === true
-        if (status === "unused") return !item.used && !item.revoked
-        if (status === "revoked") return item.revoked === true
-        return true
-      })
+    // 2. 状态过滤
+    const filtered = searched.filter((item) => {
+      if (status === "used") return item.used === true
+      if (status === "unused") return !item.used && !item.revoked
+      if (status === "revoked") return item.revoked === true
+      return true
+    })
 
-      total = statusFiltered.length
-      records = statusFiltered.slice(skip, skip + pageSize)
-    }
+    // 3. 按创建时间降序排序
+    filtered.sort((a, b) => {
+      const ta = new Date(a.createdAt || 0).getTime()
+      const tb = new Date(b.createdAt || 0).getTime()
+      return tb - ta
+    })
+
+    const total = filtered.length
+    const records = filtered.slice(skip, skip + pageSize)
 
     return {
       records,

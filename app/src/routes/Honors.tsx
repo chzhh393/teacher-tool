@@ -1,22 +1,21 @@
 import { useEffect, useState } from "react"
 
-import { students as mockStudents } from "../data/mock"
 import { CloudApi } from "../services/cloudApi"
 import type { Student } from "../types"
 import { normalizeStudents } from "../utils/normalize"
 import { useClassStore } from "../stores/classStore"
 
 const Honors = () => {
-  const [ranks, setRanks] = useState<Student[]>(mockStudents)
+  const [ranks, setRanks] = useState<Student[]>([])
   const { classId } = useClassStore()
 
   useEffect(() => {
     const fetchRanks = async () => {
       try {
         const result = await CloudApi.honorsList({ classId })
-        setRanks(normalizeStudents(result.ranks || mockStudents))
+        setRanks(normalizeStudents(result.ranks || []))
       } catch (error) {
-        setRanks(mockStudents)
+        setRanks([])
       }
     }
 
