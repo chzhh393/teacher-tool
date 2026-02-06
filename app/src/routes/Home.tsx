@@ -282,7 +282,7 @@ const Home = () => {
         </div>
       </section>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {filteredStudents.map((student) => {
           const beast = findBeast(student)
           const selected = selectedIds.includes(student.id)
