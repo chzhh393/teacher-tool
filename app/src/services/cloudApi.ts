@@ -23,9 +23,12 @@ import type {
   TTSettingsGetResponse,
   TTSettingsSaveRequest,
   TTSettingsSaveResponse,
+  TTShopListRequest,
   TTShopListResponse,
   TTShopRedeemRequest,
   TTShopRedeemResponse,
+  TTShopSaveRequest,
+  TTShopSaveResponse,
   TTStudentDeleteRequest,
   TTStudentDeleteResponse,
   TTStudentListRequest,
@@ -90,8 +93,11 @@ export const CloudApi = {
   recordExport: async () => {
     return callCloudFunction<Record<string, never>, TTRecordExportResponse>("TT_record_export")
   },
-  shopList: async () => {
-    return callCloudFunction<Record<string, never>, TTShopListResponse>("TT_shop_list")
+  shopList: async (data?: TTShopListRequest) => {
+    return callCloudFunction<TTShopListRequest, TTShopListResponse>("TT_shop_list", data || {})
+  },
+  shopSave: async (data: TTShopSaveRequest) => {
+    return callCloudFunction<TTShopSaveRequest, TTShopSaveResponse>("TT_shop_save", data)
   },
   shopRedeem: async (data: TTShopRedeemRequest) => {
     return callCloudFunction<TTShopRedeemRequest, TTShopRedeemResponse>("TT_shop_redeem", data)

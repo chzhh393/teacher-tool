@@ -28,8 +28,8 @@ export const normalizeRedeemRecords = (records: Array<RedeemRecord & { _id?: str
     id: record.id || record._id || "",
   }))
 
-export const normalizeShopItems = (items: Array<ShopItem & { _id?: string }>) =>
-  items.map((item) => ({
-    ...item,
-    id: item.id || item._id || "",
-  }))
+export const normalizeShopItems = (items: Array<ShopItem & { _id?: string; data?: ShopItem }>) =>
+  items.map((item) => {
+    const d = item.data || item
+    return { ...d, id: d.id || item._id || "" }
+  })

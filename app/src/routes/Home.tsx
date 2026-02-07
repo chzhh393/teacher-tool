@@ -2,35 +2,21 @@ import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 
 import BeastPickerModal from "../components/BeastPickerModal"
+import EvolutionCelebration, { type EvolutionEvent } from "../components/EvolutionCelebration"
 import RevokeBar from "../components/RevokeBar"
 import ScoreModal from "../components/ScoreModal"
-import { beasts, type EvolutionStage } from "../data/beasts"
+import { beasts } from "../data/beasts"
 import { signInAnonymously } from "../lib/cloudbaseAuth"
 import { CloudApi } from "../services/cloudApi"
 import { useClassStore } from "../stores/classStore"
 import type { ClassSummary, ScoreRule, Student } from "../types"
+import { getEvolutionStage, stageNames } from "../utils/evolution"
 import { normalizeScoreRecords, normalizeStudents } from "../utils/normalize"
 
 const findBeast = (student: Student) => {
   const beastId = student.beastId || student.dinosaurId
   if (!beastId) return null
   return beasts.find((item) => item.id === beastId) || null
-}
-
-const getEvolutionStage = (level: number): EvolutionStage => {
-  if (level <= 1) return 'egg'
-  if (level <= 3) return 'baby'
-  if (level <= 5) return 'juvenile'
-  if (level <= 7) return 'adult'
-  return 'ultimate'
-}
-
-const stageNames: Record<EvolutionStage, string> = {
-  egg: '蛋',
-  baby: '幼年',
-  juvenile: '少年',
-  adult: '成年',
-  ultimate: '究极',
 }
 
 const Home = () => {
@@ -48,6 +34,7 @@ const Home = () => {
   const [lastMessage, setLastMessage] = useState<string>("")
   const [feedingIds, setFeedingIds] = useState<string[]>([])
   const [notice, setNotice] = useState("")
+  const [evolutionQueue, setEvolutionQueue] = useState<EvolutionEvent[]>([])
   const { classId, setClass } = useClassStore()
 
   const filteredStudents = useMemo(() => {
@@ -117,6 +104,12 @@ const Home = () => {
     return () => window.clearTimeout(timer)
   }, [lastRecordId, lastMessage])
 
+  useEffect(() => {
+    if (!notice) return undefined
+    const timer = window.setTimeout(() => setNotice(""), 3000)
+    return () => window.clearTimeout(timer)
+  }, [notice])
+
   const toggleBatch = () => {
     setBatchMode((prev) => !prev)
     setSelectedIds([])
@@ -138,14 +131,34 @@ const Home = () => {
   }
 
   const openScoreModal = (student?: Student) => {
+    // 1. 单个学生
     if (student) {
+      if (!findBeast(student)) {
+        setNotice(`「${student.name}」还没有领养幻兽，请先领养`)
+        return
+      }
       setActiveStudent(student)
       setSelectedIds([student.id])
-    } else {
-      setActiveStudent(null)
-      if (!batchMode) {
-        setSelectedIds([])
-      }
+      setScoreModalOpen(true)
+      return
+    }
+
+    // 2. 批量模式 / 全班操作：找出未领养的学生
+    const targets = batchMode
+      ? studentList.filter((s) => selectedIds.includes(s.id))
+      : studentList
+    const unadopted = targets.filter((s) => !findBeast(s))
+
+    if (unadopted.length > 0) {
+      const names = unadopted.slice(0, 5).map((s) => s.name).join("、")
+      const suffix = unadopted.length > 5 ? `等${unadopted.length}人` : ""
+      setNotice(`${names}${suffix}还没有领养幻兽，请先领养`)
+      return
+    }
+
+    setActiveStudent(null)
+    if (!batchMode) {
+      setSelectedIds([])
     }
     setScoreModalOpen(true)
   }
@@ -159,6 +172,9 @@ const Home = () => {
         ? [activeStudent.id]
         : studentList.map((student) => student.id)
     if (!ids.length) return
+
+    // 1. 快照当前学生等级（用于进化检测）
+    const oldStudents = [...studentList]
 
     setScoreModalOpen(false)
     setFeedingIds(ids)
@@ -180,7 +196,50 @@ const Home = () => {
         setLastRecordId(latest.id)
         setLastMessage(`${latest.studentName} ${latest.ruleName} ${latest.score > 0 ? `+${latest.score}` : latest.score}`)
       }
-      await refresh(activeClassId)
+
+      // 2. 刷新并获取新数据
+      const [summaryResult, studentResult] = await Promise.all([
+        CloudApi.classGet({ classId: activeClassId }),
+        CloudApi.studentList({ classId: activeClassId }),
+      ])
+      setSummary(summaryResult.classSummary ?? null)
+      const newStudents = normalizeStudents(studentResult.students ?? [])
+      setStudentList(newStudents)
+
+      if (summaryResult.classSummary?.id) {
+        setClass(summaryResult.classSummary.id, summaryResult.classSummary.name)
+      }
+
+      try {
+        const settingsResult = await CloudApi.settingsGet({
+          classId: summaryResult.classSummary?.id || activeClassId,
+        })
+        setRules(settingsResult.settings?.scoreRules || [])
+      } catch {
+        setRules([])
+      }
+
+      // 3. 检测进化（仅加分时）
+      if (rule.score > 0) {
+        const oldMap = new Map(oldStudents.map((s) => [s.id, s]))
+        const evolutions: EvolutionEvent[] = []
+        for (const newStudent of newStudents) {
+          if (!ids.includes(newStudent.id)) continue
+          const oldStudent = oldMap.get(newStudent.id)
+          if (!oldStudent) continue
+          const oldStage = getEvolutionStage(oldStudent.level)
+          const newStage = getEvolutionStage(newStudent.level)
+          if (oldStage !== newStage) {
+            const beast = findBeast(newStudent)
+            if (beast) {
+              evolutions.push({ studentName: newStudent.name, beast, oldStage, newStage })
+            }
+          }
+        }
+        if (evolutions.length > 0) {
+          setEvolutionQueue(evolutions.slice(0, 5))
+        }
+      }
     } catch (error) {
       setLastMessage("操作失败，请稍后重试")
     } finally {
@@ -394,6 +453,14 @@ const Home = () => {
 
       {lastRecordId && lastMessage ? <RevokeBar message={lastMessage} onRevoke={handleRevoke} /> : null}
 
+      {notice ? (
+        <div className="fixed inset-x-0 bottom-1/3 z-50 flex justify-center pointer-events-none">
+          <div className="pointer-events-auto rounded-xl border border-amber-200 bg-amber-50 px-5 py-3 text-sm font-medium text-amber-800 shadow-lg">
+            {notice}
+          </div>
+        </div>
+      ) : null}
+
       {batchMode ? (
         <div className="fixed inset-x-0 bottom-0 z-40">
           <div className="mx-auto flex w-full max-w-[1400px] items-center justify-between gap-4 border border-white/70 bg-white/85 px-4 py-3 shadow-soft backdrop-blur">
@@ -430,6 +497,13 @@ const Home = () => {
           </div>
         </div>
       ) : null}
+
+      {evolutionQueue.length > 0 && (
+        <EvolutionCelebration
+          queue={evolutionQueue}
+          onComplete={() => setEvolutionQueue([])}
+        />
+      )}
     </div >
   )
 }

@@ -34,7 +34,10 @@ cd app && npm install && npm run dev
 
 ## 部署
 
-详见 [部署文档](docs/guides/deployment/deployment.md)。
+**当用户提到"部署"、"上线"、"发布"时，必须先阅读 `docs/guides/deployment/deployment.md`，然后按流程执行：**
+1. 用 MCP `envQuery` 确认当前环境是 `cloud1-3g9mi825a3a27f25`
+2. 询问部署范围（前端 / 云函数 / 全部）
+3. 按部署文档步骤执行，部署后验证
 
 ## 注意事项
 

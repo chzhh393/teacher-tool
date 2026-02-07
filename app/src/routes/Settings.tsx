@@ -1,13 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
 import { beasts } from "../data/beasts"
+import ExcelImportModal from "../components/ExcelImportModal"
 import Modal from "../components/Modal"
 import { CloudApi } from "../services/cloudApi"
 import { useAuthStore } from "../stores/authStore"
 import { useClassStore } from "../stores/classStore"
-import type { ClassInfo, ClassSettings, ScoreRule, Student } from "../types"
-import { normalizeStudents } from "../utils/normalize"
+import type { ClassInfo, ClassSettings, ScoreRule, ShopItem, Student } from "../types"
+import { normalizeShopItems, normalizeStudents } from "../utils/normalize"
 
 const getDefaultSettings = (): ClassSettings => ({
   systemName: "幻兽学院",
@@ -28,6 +29,29 @@ const getDefaultSettings = (): ClassSettings => ({
     { id: "rule-13", name: "打瞌睡", score: -1, icon: "😴", pinyin: "dks", order: 103, type: "subtract" },
     { id: "rule-14", name: "未交作业", score: -2, icon: "❌", pinyin: "wjzy", order: 104, type: "subtract" },
   ],
+})
+
+const getDefaultShopItems = (): ShopItem[] => [
+  { id: "item-default-1", name: "免作业卡", description: "免写一次作业", cost: 50, icon: "🎫", type: "privilege", stock: 10, limitPerStudent: 1, order: 0 },
+  { id: "item-default-2", name: "前排座位券", description: "选择一周的座位", cost: 30, icon: "🪑", type: "privilege", stock: 15, limitPerStudent: 1, order: 1 },
+  { id: "item-default-3", name: "选同桌券", description: "选择下周的同桌", cost: 40, icon: "🤝", type: "privilege", stock: 10, limitPerStudent: 1, order: 2 },
+  { id: "item-default-4", name: "当一天班长", description: "体验一天班长", cost: 60, icon: "👑", type: "privilege", stock: 6, limitPerStudent: 1, order: 3 },
+  { id: "item-default-5", name: "铅笔", description: "一支铅笔", cost: 10, icon: "✏️", type: "physical", stock: 50, limitPerStudent: 2, order: 4 },
+  { id: "item-default-6", name: "作业本", description: "一本作业本", cost: 15, icon: "📒", type: "physical", stock: 30, limitPerStudent: 2, order: 5 },
+  { id: "item-default-7", name: "小零食", description: "老师准备的小零食", cost: 20, icon: "🍪", type: "physical", stock: 40, limitPerStudent: 2, order: 6 },
+  { id: "item-default-8", name: "小组长体验", description: "当一周小组长", cost: 40, icon: "🧑‍🏫", type: "privilege", stock: 8, limitPerStudent: 1, order: 7 },
+]
+
+const createEmptyShopItem = (): ShopItem => ({
+  id: `item-${Date.now()}`,
+  name: "",
+  description: "",
+  cost: 10,
+  icon: "🎁",
+  type: "physical",
+  stock: 10,
+  limitPerStudent: 0,
+  order: Date.now(),
 })
 
 const createEmptyRule = (type: "add" | "subtract"): ScoreRule => ({
@@ -51,6 +75,7 @@ const Settings = () => {
   const [classes, setClasses] = useState<ClassInfo[]>([])
   const [settings, setSettings] = useState<ClassSettings>(getDefaultSettings)
   const [students, setStudents] = useState<Student[]>([])
+  const [shopItems, setShopItems] = useState<ShopItem[]>(getDefaultShopItems)
   const [newStudentName, setNewStudentName] = useState("")
   const [batchText, setBatchText] = useState("")
   const [createModalOpen, setCreateModalOpen] = useState(false)
@@ -58,6 +83,9 @@ const Settings = () => {
   const [renameModalOpen, setRenameModalOpen] = useState(false)
   const [renameName, setRenameName] = useState("")
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [excelModalOpen, setExcelModalOpen] = useState(false)
+  const [activeSection, setActiveSection] = useState("class")
+  const sectionRefs = useRef<Record<string, HTMLElement | null>>({ class: null, students: null, rules: null, shop: null })
   const [loading, setLoading] = useState(false)
   const [notice, setNotice] = useState<{ message: string; type: "success" | "error" } | null>(null)
   const navigate = useNavigate()
@@ -66,6 +94,9 @@ const Settings = () => {
 
   const showNotice = (message: string, type: "success" | "error" = "success") => {
     setNotice({ message, type })
+    if (type === "success") {
+      setTimeout(() => setNotice(null), 2500)
+    }
   }
   const clearNotice = () => setNotice(null)
   const getErrorMessage = (error: unknown, fallback: string) => {
@@ -126,10 +157,11 @@ const Settings = () => {
 
     setLoading(true)
     try {
-      const [classListResult, settingsResult, studentResult] = await Promise.all([
+      const [classListResult, settingsResult, studentResult, shopResult] = await Promise.all([
         CloudApi.classList(),
         CloudApi.settingsGet({ classId: effectiveClassId }),
         CloudApi.studentList({ classId: effectiveClassId }),
+        CloudApi.shopList({ classId: effectiveClassId }),
       ])
 
       const nextClasses = classListResult.classes || []
@@ -154,6 +186,15 @@ const Settings = () => {
         setSettings(fallbackSettings)
       }
       setStudents(normalizeStudents(studentResult.students || []))
+      const remoteShopItems = normalizeShopItems(shopResult.items || [])
+      if (remoteShopItems.length > 0) {
+        setShopItems(remoteShopItems)
+      } else {
+        // 新班级没有商品，自动初始化默认商品到数据库
+        const defaults = getDefaultShopItems()
+        setShopItems(defaults)
+        CloudApi.shopSave({ classId: effectiveClassId, items: defaults }).catch(console.error)
+      }
     } finally {
       setLoading(false)
     }
@@ -180,7 +221,10 @@ const Settings = () => {
         const result = await CloudApi.classUpsert({ classInfo })
         setClass(result.classInfo.id, result.classInfo.name)
       }
-      await CloudApi.settingsSave({ classId: effectiveClassId, settings })
+      await Promise.all([
+        CloudApi.settingsSave({ classId: effectiveClassId, settings }),
+        CloudApi.shopSave({ classId: effectiveClassId, items: shopItems }),
+      ])
       showNotice("设置已保存")
     } catch (error) {
       console.error(error)
@@ -262,6 +306,40 @@ const Settings = () => {
     }
   }
 
+  const handleExcelImport = async (names: string[]) => {
+    const effectiveClassId = classInfo.id || classId
+    if (!effectiveClassId) {
+      showNotice("请先选择班级", "error")
+      return
+    }
+    setLoading(true)
+    clearNotice()
+    try {
+      for (const name of names) {
+        await CloudApi.studentUpsert({
+          student: {
+            id: `stu-${Date.now()}-${Math.random()}`,
+            name,
+            classId: effectiveClassId,
+            level: 1,
+            totalScore: 0,
+            availableScore: 0,
+            badges: 0,
+            progress: 0,
+          },
+        })
+      }
+      setExcelModalOpen(false)
+      await refresh(effectiveClassId)
+      showNotice(`已通过 Excel 导入 ${names.length} 名学生`)
+    } catch (error) {
+      console.error(error)
+      showNotice("Excel 导入失败，请稍后重试", "error")
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleDeleteStudent = async (studentId: string, studentName: string) => {
     if (!window.confirm(`确认删除学生「${studentName}」？`)) return
     setLoading(true)
@@ -325,6 +403,18 @@ const Settings = () => {
       ...prev,
       scoreRules: prev.scoreRules.filter((rule) => rule.id !== ruleId),
     }))
+  }
+
+  const handleShopItemUpdate = (itemId: string, patch: Partial<ShopItem>) => {
+    setShopItems((prev) => prev.map((item) => (item.id === itemId ? { ...item, ...patch } : item)))
+  }
+
+  const handleShopItemAdd = () => {
+    setShopItems((prev) => [...prev, createEmptyShopItem()])
+  }
+
+  const handleShopItemRemove = (itemId: string) => {
+    setShopItems((prev) => prev.filter((item) => item.id !== itemId))
   }
 
   const handleClassCreate = () => {
@@ -450,14 +540,71 @@ const Settings = () => {
     }
   }
 
+  const tabs = [
+    { key: "class", label: "班级管理" },
+    { key: "students", label: "学生管理" },
+    { key: "rules", label: "成长与积分" },
+    { key: "shop", label: "小卖部" },
+  ]
+
+  const scrollTo = (key: string) => {
+    const el = sectionRefs.current[key]
+    if (!el) return
+    const top = el.getBoundingClientRect().top + window.scrollY - 160
+    window.scrollTo({ top, behavior: "smooth" })
+  }
+
+  useEffect(() => {
+    const elements = Object.entries(sectionRefs.current).filter(
+      (entry): entry is [string, HTMLElement] => entry[1] !== null,
+    )
+    if (elements.length === 0) return undefined
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            const key = entry.target.getAttribute("data-section")
+            if (key) setActiveSection(key)
+          }
+        }
+      },
+      { rootMargin: "-20% 0px -60% 0px" },
+    )
+
+    for (const [, el] of elements) observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
   return (
     <div className="space-y-6">
-      <div className="card p-6 border border-gray-100">
-        <h2 className="text-2xl font-bold text-text-primary">老师设置</h2>
-        <p className="mt-2 text-sm text-text-secondary">设置等级阈值与积分规则。</p>
-      </div>
+      <div className="sticky top-[4.25rem] z-30 -mt-2">
+        <div className="rounded-2xl border border-gray-100 bg-white/95 backdrop-blur shadow-sm flex overflow-x-auto">
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => scrollTo(tab.key)}
+              className={`relative whitespace-nowrap px-4 py-2.5 text-sm font-semibold transition-colors ${
+                activeSection === tab.key
+                  ? "text-primary"
+                  : "text-text-tertiary hover:text-text-secondary"
+              }`}
+            >
+              {tab.label}
+              {activeSection === tab.key && (
+                <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-primary" />
+              )}
+            </button>
+          ))}
+        </div>
+        </div>
 
-      <section className="card p-6 border border-gray-100">
+      <section
+        ref={(el) => { sectionRefs.current.class = el }}
+        data-section="class"
+        className="card p-6 border border-gray-100 scroll-mt-36"
+      >
         <h3 className="text-lg font-semibold text-text-primary">班级管理</h3>
         <div className="mt-4 flex flex-wrap gap-3 text-xs text-text-secondary">
           <button
@@ -509,18 +656,46 @@ const Settings = () => {
         </div>
       </section>
 
-      <section className="card p-6 border border-gray-100">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="text-lg font-semibold text-text-primary">学生管理</h3>
-          <button
-            type="button"
-            onClick={handleRandomAssign}
-            className="rounded-lg btn-active px-4 py-2 text-xs font-semibold"
-          >
-            一键分配幻兽
-          </button>
+      <section
+        ref={(el) => { sectionRefs.current.students = el }}
+        data-section="students"
+        className="card p-6 border border-gray-100 space-y-4 scroll-mt-36"
+      >
+        <h3 className="text-lg font-semibold text-text-primary">学生管理</h3>
+        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+          <p className="text-sm font-semibold text-text-primary">幻兽分配方式</p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-xl border border-gray-200 bg-white p-3">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">🤩</span>
+                <span className="text-sm font-semibold text-text-primary">玩法一：学生自己选</span>
+              </div>
+              <p className="mt-1.5 text-xs text-text-tertiary">在班级主页打开投屏，让学生点击自己卡片上的「领养」按钮挑选心仪的幻兽</p>
+              <button
+                type="button"
+                onClick={() => navigate("/")}
+                className="mt-3 w-full rounded-lg btn-active px-4 py-2 text-xs font-semibold"
+              >
+                前往班级主页
+              </button>
+            </div>
+            <div className="rounded-xl border border-gray-200 bg-white p-3">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">🎲</span>
+                <span className="text-sm font-semibold text-text-primary">玩法二：老师随机分配</span>
+              </div>
+              <p className="mt-1.5 text-xs text-text-tertiary">一键为全班学生随机分配幻兽，快速开启养成之旅</p>
+              <button
+                type="button"
+                onClick={handleRandomAssign}
+                className="mt-3 w-full rounded-lg border border-primary/30 bg-white px-4 py-2 text-xs font-semibold text-primary hover:bg-primary/5"
+              >
+                一键随机分配
+              </button>
+            </div>
+          </div>
         </div>
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2">
           <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
             <p className="text-sm font-semibold text-text-primary">添加学生</p>
             <div className="mt-3 flex gap-2">
@@ -545,13 +720,22 @@ const Settings = () => {
               placeholder="一行一个姓名，或用逗号分隔"
               className="mt-2 h-24 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
             />
-            <button
-              type="button"
-              onClick={handleBatchImport}
-              className="mt-2 rounded-xl bg-primary/10 px-3 py-2 text-sm font-semibold text-primary"
-            >
-              导入名单
-            </button>
+            <div className="mt-2 flex gap-2">
+              <button
+                type="button"
+                onClick={handleBatchImport}
+                className="rounded-xl bg-primary/10 px-3 py-2 text-sm font-semibold text-primary"
+              >
+                导入名单
+              </button>
+              <button
+                type="button"
+                onClick={() => setExcelModalOpen(true)}
+                className="rounded-xl bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-600"
+              >
+                Excel 导入
+              </button>
+            </div>
           </div>
           <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
             <p className="text-sm font-semibold text-text-primary">当前学生 ({students.length})</p>
@@ -577,83 +761,163 @@ const Settings = () => {
         </div>
       </section>
 
-      <section className="card p-6 border border-gray-100">
-        <h3 className="text-lg font-semibold text-text-primary">成长阈值</h3>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          {settings.levelThresholds.map((value, index) => (
-            <label key={index} className="text-xs text-text-secondary">
-              Lv.{index + 1}
-              <input
-                type="number"
-                value={value}
-                onChange={(event) => {
-                  const next = [...settings.levelThresholds]
-                  next[index] = Number(event.target.value)
-                  setSettings((prev) => ({ ...prev, levelThresholds: next }))
-                }}
-                className="mt-2 w-full rounded-2xl border border-gray-200 px-3 py-2"
-              />
-            </label>
-          ))}
+      <section
+        ref={(el) => { sectionRefs.current.rules = el }}
+        data-section="rules"
+        className="card p-6 border border-gray-100 space-y-6 scroll-mt-36"
+      >
+        <div>
+          <h3 className="text-lg font-semibold text-text-primary">成长阈值</h3>
+          <p className="mt-1 text-xs text-text-tertiary">每个等级需要的累计积分，决定幻兽的进化节奏</p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            {settings.levelThresholds.map((value, index) => (
+              <label key={index} className="text-xs text-text-secondary">
+                Lv.{index + 1}
+                <input
+                  type="number"
+                  value={value}
+                  onChange={(event) => {
+                    const next = [...settings.levelThresholds]
+                    next[index] = Number(event.target.value)
+                    setSettings((prev) => ({ ...prev, levelThresholds: next }))
+                  }}
+                  className="mt-2 w-full rounded-2xl border border-gray-200 px-3 py-2"
+                />
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <hr className="border-gray-100" />
+
+        <div>
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-text-primary">积分规则</h3>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => handleRuleAdd("add")}
+                className="rounded-lg border border-success/30 px-3 py-1 text-xs font-semibold text-success"
+              >
+                + 加分项
+              </button>
+              <button
+                type="button"
+                onClick={() => handleRuleAdd("subtract")}
+                className="rounded-lg border border-red-200 px-3 py-1 text-xs font-semibold text-danger"
+              >
+                + 扣分项
+              </button>
+            </div>
+          </div>
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            {[{ label: "加分项", data: addRules }, { label: "扣分项", data: subtractRules }].map((group) => (
+              <div key={group.label} className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                <p className="text-sm font-semibold text-text-primary">{group.label}</p>
+                <div className="mt-3 space-y-3">
+                  {group.data.map((rule) => (
+                    <div key={rule.id} className="flex flex-wrap items-center gap-2 rounded-2xl bg-white px-3 py-2">
+                      <input
+                        value={rule.icon}
+                        onChange={(event) => handleRuleUpdate(rule.id, { icon: event.target.value })}
+                        className="w-12 rounded-xl border border-gray-200 px-2 py-1 text-center"
+                      />
+                      <input
+                        value={rule.name}
+                        onChange={(event) => handleRuleUpdate(rule.id, { name: event.target.value })}
+                        placeholder="规则名称"
+                        className="flex-1 rounded-xl border border-gray-200 px-2 py-1 text-sm"
+                      />
+                      <input
+                        type="number"
+                        value={rule.score}
+                        onChange={(event) => handleRuleUpdate(rule.id, { score: Number(event.target.value) })}
+                        className="w-20 rounded-xl border border-gray-200 px-2 py-1 text-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRuleRemove(rule.id)}
+                        className="text-xs text-danger"
+                      >
+                        删除
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
-      <section className="card p-6 border border-gray-100">
+      <section
+        ref={(el) => { sectionRefs.current.shop = el }}
+        data-section="shop"
+        className="card p-6 border border-gray-100 scroll-mt-36"
+      >
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-text-primary">积分规则</h3>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => handleRuleAdd("add")}
-              className="rounded-lg border border-success/30 px-3 py-1 text-xs font-semibold text-success"
-            >
-              + 加分项
-            </button>
-            <button
-              type="button"
-              onClick={() => handleRuleAdd("subtract")}
-              className="rounded-lg border border-red-200 px-3 py-1 text-xs font-semibold text-danger"
-            >
-              + 扣分项
-            </button>
-          </div>
+          <h3 className="text-lg font-semibold text-text-primary">小卖部商品</h3>
+          <button
+            type="button"
+            onClick={handleShopItemAdd}
+            className="rounded-lg border border-primary/30 px-3 py-1 text-xs font-semibold text-primary"
+          >
+            + 添加商品
+          </button>
         </div>
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          {[{ label: "加分项", data: addRules }, { label: "扣分项", data: subtractRules }].map((group) => (
-            <div key={group.label} className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-              <p className="text-sm font-semibold text-text-primary">{group.label}</p>
-              <div className="mt-3 space-y-3">
-                {group.data.map((rule) => (
-                  <div key={rule.id} className="flex flex-wrap items-center gap-2 rounded-2xl bg-white px-3 py-2">
-                    <input
-                      value={rule.icon}
-                      onChange={(event) => handleRuleUpdate(rule.id, { icon: event.target.value })}
-                      className="w-12 rounded-xl border border-gray-200 px-2 py-1 text-center"
-                    />
-                    <input
-                      value={rule.name}
-                      onChange={(event) => handleRuleUpdate(rule.id, { name: event.target.value })}
-                      placeholder="规则名称"
-                      className="flex-1 rounded-xl border border-gray-200 px-2 py-1 text-sm"
-                    />
+        <div className="mt-4 rounded-2xl border border-gray-100 bg-gray-50 p-4">
+          <div className="space-y-3">
+            {shopItems.length > 0 ? (
+              shopItems.map((item) => (
+                <div key={item.id} className="flex flex-wrap items-center gap-2 rounded-2xl bg-white px-3 py-2">
+                  <input
+                    value={item.icon}
+                    onChange={(e) => handleShopItemUpdate(item.id, { icon: e.target.value })}
+                    className="w-12 rounded-xl border border-gray-200 px-2 py-1 text-center"
+                  />
+                  <input
+                    value={item.name}
+                    onChange={(e) => handleShopItemUpdate(item.id, { name: e.target.value })}
+                    placeholder="商品名称"
+                    className="min-w-0 flex-1 rounded-xl border border-gray-200 px-2 py-1 text-sm"
+                  />
+                  <input
+                    value={item.description}
+                    onChange={(e) => handleShopItemUpdate(item.id, { description: e.target.value })}
+                    placeholder="描述"
+                    className="min-w-0 flex-1 rounded-xl border border-gray-200 px-2 py-1 text-sm"
+                  />
+                  <label className="flex items-center gap-1 text-xs text-text-secondary">
+                    价格
                     <input
                       type="number"
-                      value={rule.score}
-                      onChange={(event) => handleRuleUpdate(rule.id, { score: Number(event.target.value) })}
-                      className="w-20 rounded-xl border border-gray-200 px-2 py-1 text-sm"
+                      value={item.cost}
+                      onChange={(e) => handleShopItemUpdate(item.id, { cost: Number(e.target.value) })}
+                      className="w-16 rounded-xl border border-gray-200 px-2 py-1 text-sm"
                     />
-                    <button
-                      type="button"
-                      onClick={() => handleRuleRemove(rule.id)}
-                      className="text-xs text-danger"
-                    >
-                      删除
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
+                  </label>
+                  <label className="flex items-center gap-1 text-xs text-text-secondary">
+                    库存
+                    <input
+                      type="number"
+                      value={item.stock}
+                      onChange={(e) => handleShopItemUpdate(item.id, { stock: Number(e.target.value) })}
+                      className="w-16 rounded-xl border border-gray-200 px-2 py-1 text-sm"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => handleShopItemRemove(item.id)}
+                    className="text-xs text-danger"
+                  >
+                    删除
+                  </button>
+                </div>
+              ))
+            ) : (
+              <p className="py-4 text-center text-sm text-text-tertiary">暂无商品，请添加</p>
+            )}
+          </div>
         </div>
       </section>
 
@@ -668,15 +932,20 @@ const Settings = () => {
       </div>
       {loading ? <p className="text-xs text-text-tertiary">处理中...</p> : null}
       {notice ? (
-        <div
-          className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold shadow-sm ${
-            notice.type === "error"
-              ? "border-red-200 bg-red-50 text-danger"
-              : "border-emerald-200 bg-emerald-50 text-emerald-700"
-          }`}
-        >
-          <span className="text-base">{notice.type === "error" ? "⚠️" : "✅"}</span>
-          <span>{notice.message}</span>
+        <div className="fixed top-4 left-1/2 z-50 -translate-x-1/2 animate-[slideDown_0.3s_ease-out]">
+          <div
+            className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold shadow-lg ${
+              notice.type === "error"
+                ? "border-red-200 bg-red-50 text-danger"
+                : "border-emerald-200 bg-emerald-50 text-emerald-700"
+            }`}
+          >
+            <span className="text-base">{notice.type === "error" ? "⚠️" : "✅"}</span>
+            <span>{notice.message}</span>
+            <button type="button" onClick={clearNotice} className="ml-2 text-xs opacity-60 hover:opacity-100">
+              ✕
+            </button>
+          </div>
         </div>
       ) : null}
       <Modal
@@ -780,6 +1049,12 @@ const Settings = () => {
           将删除班级 “{classInfo.name || "未命名班级"}”，相关学生与设置将不可恢复。
         </div>
       </Modal>
+      <ExcelImportModal
+        open={excelModalOpen}
+        onClose={() => setExcelModalOpen(false)}
+        onImport={handleExcelImport}
+        loading={loading}
+      />
     </div>
   )
 }

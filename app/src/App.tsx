@@ -12,6 +12,7 @@ import Home from "./routes/Home"
 import Records from "./routes/Records"
 import Settings from "./routes/Settings"
 import Store from "./routes/Store"
+import Updates from "./routes/Updates"
 import { CloudApi } from "./services/cloudApi"
 import { useAuthStore } from "./stores/authStore"
 
@@ -50,6 +51,7 @@ const App = () => {
             <Route path="/honors" element={<Honors />} />
             <Route path="/store" element={<Store />} />
             <Route path="/records" element={<Records />} />
+            <Route path="/updates" element={<Updates />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/activation-admin" element={<ActivationAdmin />} />
             <Route path="/beast-admin" element={<BeastAdmin />} />

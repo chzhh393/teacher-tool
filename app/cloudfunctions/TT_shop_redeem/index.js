@@ -8,6 +8,7 @@ exports.main = async (event = {}) => {
 
   const app = tcb.init({ env: tcb.SYMBOL_CURRENT_ENV })
   const db = app.database()
+  const _ = db.command
   const now = new Date()
 
   const studentResult = await db.collection("TT_students").doc(studentId).get()
@@ -24,16 +25,27 @@ exports.main = async (event = {}) => {
   }
   const item = itemDoc.data || itemDoc
 
+  // 库存检查
+  if ((item.stock ?? 0) <= 0) {
+    throw new Error("商品已售罄")
+  }
+
   if ((student.availableScore || 0) < (item.cost || 0)) {
     throw new Error("积分不足")
   }
 
+  // 扣减学生积分
   const updatedStudent = {
     ...student,
     availableScore: (student.availableScore || 0) - (item.cost || 0),
     updatedAt: now,
   }
   await db.collection("TT_students").doc(studentId).set({ data: updatedStudent })
+
+  // 原子扣减库存
+  await db.collection("TT_shop_items").doc(itemId).update({
+    data: { stock: _.inc(-1) },
+  })
 
   const redeemRecord = {
     classId: classId || student.classId,

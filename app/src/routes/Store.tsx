@@ -21,7 +21,7 @@ const Store = () => {
     setLoading(true)
     try {
       const [itemResult, studentResult, recordResult] = await Promise.all([
-        CloudApi.shopList(),
+        CloudApi.shopList({ classId }),
         CloudApi.studentList({ classId }),
         CloudApi.redeemList({ classId, page: 1, pageSize: 50 }),
       ])

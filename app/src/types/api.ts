@@ -95,8 +95,21 @@ export interface TTRecordExportResponse {
   csvUrl: string
 }
 
+export interface TTShopListRequest {
+  classId?: string
+}
+
 export interface TTShopListResponse {
   items: ShopItem[]
+}
+
+export interface TTShopSaveRequest {
+  classId: string
+  items: ShopItem[]
+}
+
+export interface TTShopSaveResponse {
+  ok: boolean
 }
 
 export interface TTShopRedeemRequest {

@@ -20,15 +20,13 @@ const navItems = [
 const AppShell = () => {
   const [classModalOpen, setClassModalOpen] = useState(false)
   const [classes, setClasses] = useState<ClassInfo[]>([])
-  const [cloudStatus, setCloudStatus] = useState("未连接")
   const { classId, className, setClass, clearClass } = useClassStore()
   const { username, token, clearAuth } = useAuthStore()
 
   useEffect(() => {
     const load = async () => {
       try {
-        const state = await signInAnonymously()
-        setCloudStatus(state ? "已连接" : "未配置")
+        await signInAnonymously()
         if (!token) {
           setClasses([])
           return
@@ -45,7 +43,7 @@ const AppShell = () => {
           applyTheme(settings.settings?.themeColor || "coral")
         }
       } catch (error) {
-        setCloudStatus("连接失败")
+        console.error("云开发连接失败", error)
         setClasses([])
       }
     }
@@ -93,39 +91,48 @@ const AppShell = () => {
                 {item.label}
               </NavLink>
             ))}
-            <div className="flex w-full min-w-[200px] flex-1 items-center gap-2 rounded-xl border border-gray-100 bg-white px-3 py-2 text-sm text-text-secondary shadow-inner lg:max-w-sm">
-              <span className="text-base">🔍</span>
-              <input
-                className="w-full bg-transparent outline-none"
-                placeholder="搜索学生、记录、奖励..."
-              />
-            </div>
+
           </div>
 
-          <div className="ml-auto flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setClassModalOpen(true)}
-              className="btn-default text-sm"
-            >
-              {className || "切换班级"}
-            </button>
-            <span className={cloudStatus === "已连接" ? "status-available" : "status-limited"}>
-              {cloudStatus}
-            </span>
-            <div className="hidden items-center gap-2 rounded-xl border border-gray-100 bg-white px-3 py-2 text-sm text-text-secondary sm:flex">
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
-                {(username || "U").slice(0, 1).toUpperCase()}
-              </span>
-              <span>{username || "未登录"}</span>
+          <div className="ml-auto flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setClassModalOpen(true)}
+                className="btn-default text-sm"
+              >
+                {className || "切换班级"}
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="text-xs font-semibold text-danger hover:text-red-500 transition-colors"
+
+            <div className="flex items-center gap-2 rounded-xl border border-gray-100 bg-white px-2 py-1 shadow-inner">
+              <div className="hidden items-center gap-2 text-sm text-text-secondary sm:flex">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                  {(username || "U").slice(0, 1).toUpperCase()}
+                </span>
+                <span>{username || "未登录"}</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="rounded-lg px-2 py-1 text-xs font-semibold text-danger transition-colors hover:bg-red-50 hover:text-red-500"
+              >
+                退出
+              </button>
+            </div>
+
+            <NavLink
+              to="/updates"
+              className={({ isActive }) =>
+                `rounded-xl px-3 py-2 text-sm font-semibold transition-all ${
+                  isActive
+                    ? "bg-primary/10 text-primary shadow-sm"
+                    : "bg-white/70 text-text-secondary hover:bg-white hover:text-text-primary"
+                }`
+              }
             >
-              退出
-            </button>
+              更新日志
+            </NavLink>
           </div>
         </div>
       </header>
