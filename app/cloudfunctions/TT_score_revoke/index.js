@@ -3,17 +3,19 @@ const tcb = require("tcb-admin-node")
 const DEFAULT_THRESHOLDS = [0, 5, 12, 22, 35, 50, 70, 95, 125, 160]
 
 const computeLevel = (totalScore, thresholds) => {
-  const levels = thresholds.length
+  const maxLevel = thresholds.length
   let level = 1
-  for (let i = 0; i < levels; i += 1) {
+  for (let i = 0; i < maxLevel; i += 1) {
     if (totalScore >= thresholds[i]) {
       level = i + 1
     }
   }
 
-  const currentIndex = Math.min(level - 1, thresholds.length - 1)
-  const currentBase = thresholds[currentIndex] ?? 0
-  const nextBase = thresholds[currentIndex + 1] ?? currentBase
+  if (level >= maxLevel) {
+    return { level, progress: 100 }
+  }
+  const currentBase = thresholds[level - 1] ?? 0
+  const nextBase = thresholds[level] ?? currentBase
   const range = Math.max(nextBase - currentBase, 1)
   const progress = Math.min(100, Math.max(0, Math.round(((totalScore - currentBase) / range) * 100)))
 
@@ -21,9 +23,14 @@ const computeLevel = (totalScore, thresholds) => {
 }
 
 const getThresholds = async (db, classId) => {
-  const settingsResult = await db.collection("TT_settings").where({ classId }).limit(1).get()
+  const _ = db.command
+  const settingsResult = await db.collection("TT_settings").where(_.or([
+    { classId },
+    { "data.classId": classId },
+  ])).limit(1).get()
   const settings = settingsResult.data?.[0]
-  return settings?.levelThresholds || DEFAULT_THRESHOLDS
+  const raw = settings?.data || settings
+  return raw?.levelThresholds || DEFAULT_THRESHOLDS
 }
 
 exports.main = async (event = {}) => {
@@ -61,9 +68,26 @@ exports.main = async (event = {}) => {
     const reverseAvailable = score > 0
       ? Math.max(0, (student.availableScore || 0) - score)
       : Math.max(0, (student.availableScore || 0) + Math.abs(score))
+    const reverseEarned = score > 0
+      ? Math.max(0, (student.earnedScore || 0) - score)
+      : (student.earnedScore || 0)
 
     const { level, progress } = computeLevel(reverseTotalScore, thresholds)
-    const nextBadges = student.level === 10 && level < 10 ? Math.max(0, (student.badges || 0) - 1) : student.badges || 0
+    const maxLevel = thresholds.length
+    let nextBadges = student.badges || 0
+    let nextCollected = student.collectedBeasts || []
+    if (student.level === maxLevel && level < maxLevel) {
+      nextBadges = Math.max(0, nextBadges - 1)
+      // 撤回满级时移除最后收集的幻兽
+      if (nextCollected.length > 0) {
+        nextCollected = nextCollected.slice(0, -1)
+      }
+    } else if (student.level < maxLevel && level === maxLevel) {
+      nextBadges += 1
+      if (student.beastId) {
+        nextCollected = [...nextCollected, student.beastId]
+      }
+    }
 
     const updatedStudent = {
       ...student,
@@ -72,6 +96,8 @@ exports.main = async (event = {}) => {
       level,
       progress,
       badges: nextBadges,
+      collectedBeasts: nextCollected,
+      earnedScore: reverseEarned,
       updatedAt: now,
     }
 

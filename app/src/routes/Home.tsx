@@ -441,7 +441,7 @@ const Home = () => {
               <div className="mt-3">
                 <div className="flex items-center justify-between text-xs text-text-tertiary mb-1">
                   <span>{isMaxLevel ? "收集完成" : `进度 ${student.progress}%`}</span>
-                  <span>积分 {student.availableScore}</span>
+                  <span>成长值 {student.totalScore}</span>
                 </div>
                 <div className="h-1.5 w-full rounded-full bg-gray-100 overflow-hidden">
                   <div

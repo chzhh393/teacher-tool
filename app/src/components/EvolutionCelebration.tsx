@@ -151,8 +151,8 @@ const EvolutionCelebration = ({ queue, onComplete }: EvolutionCelebrationProps) 
             <motion.div
               className="relative z-10 flex flex-col items-center"
               initial={{ scale: 0, opacity: 0, y: 40 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              transition={{ type: "spring", stiffness: 200, damping: 15 }}
+              animate={{ scale: [0, 2, 2, 1], opacity: 1, y: 0 }}
+              transition={{ duration: 1.2, times: [0, 0.4, 0.6, 1], ease: "easeOut" }}
             >
               <motion.img
                 src={newImage}

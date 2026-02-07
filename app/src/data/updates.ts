@@ -12,6 +12,15 @@ export interface UpdateEntry {
 
 export const updates: UpdateEntry[] = [
   {
+    id: "sort-settings",
+    date: "2026-02-07",
+    version: "v1.0.9",
+    title: "小卖部与积分项支持排序",
+    summary: "加分项、减分项和小卖部商品支持自定义排序。",
+    highlights: ["设置页拖拽排序", "保存后列表按新顺序展示"],
+    tags: ["功能"],
+  },
+  {
     id: "pwa-install",
     date: "2026-02-07",
     version: "v1.0.8",

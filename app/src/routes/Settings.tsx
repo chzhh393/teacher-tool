@@ -9,18 +9,19 @@ import { CloudApi } from "../services/cloudApi"
 import { useAuthStore } from "../stores/authStore"
 import { useClassStore } from "../stores/classStore"
 import type { ClassInfo, ClassSettings, ScoreRule, ShopItem, Student } from "../types"
+import { getEvolutionStage, stageNames } from "../utils/evolution"
 import { normalizeShopItems, normalizeStudents } from "../utils/normalize"
 import { getDefaultSettings } from "../data/defaults"
 
 const getDefaultShopItems = (): ShopItem[] => [
-  { id: "item-default-1", name: "免作业卡", description: "免写一次作业", cost: 50, icon: "🎫", type: "privilege", stock: 10, limitPerStudent: 1, order: 0 },
-  { id: "item-default-2", name: "前排座位券", description: "选择一周的座位", cost: 30, icon: "🪑", type: "privilege", stock: 15, limitPerStudent: 1, order: 1 },
-  { id: "item-default-3", name: "选同桌券", description: "选择下周的同桌", cost: 40, icon: "🤝", type: "privilege", stock: 10, limitPerStudent: 1, order: 2 },
-  { id: "item-default-4", name: "当一天班长", description: "体验一天班长", cost: 60, icon: "👑", type: "privilege", stock: 6, limitPerStudent: 1, order: 3 },
-  { id: "item-default-5", name: "铅笔", description: "一支铅笔", cost: 10, icon: "✏️", type: "physical", stock: 50, limitPerStudent: 2, order: 4 },
-  { id: "item-default-6", name: "作业本", description: "一本作业本", cost: 15, icon: "📒", type: "physical", stock: 30, limitPerStudent: 2, order: 5 },
-  { id: "item-default-7", name: "小零食", description: "老师准备的小零食", cost: 20, icon: "🍪", type: "physical", stock: 40, limitPerStudent: 2, order: 6 },
-  { id: "item-default-8", name: "小组长体验", description: "当一周小组长", cost: 40, icon: "🧑‍🏫", type: "privilege", stock: 8, limitPerStudent: 1, order: 7 },
+  { id: "item-default-5", name: "铅笔", description: "一支铅笔", cost: 10, icon: "✏️", type: "physical", stock: 50, limitPerStudent: 2, order: 0 },
+  { id: "item-default-6", name: "作业本", description: "一本作业本", cost: 15, icon: "📒", type: "physical", stock: 30, limitPerStudent: 2, order: 1 },
+  { id: "item-default-7", name: "小零食", description: "老师准备的小零食", cost: 20, icon: "🍪", type: "physical", stock: 40, limitPerStudent: 2, order: 2 },
+  { id: "item-default-2", name: "前排座位券", description: "选择一周的座位", cost: 30, icon: "🪑", type: "privilege", stock: 15, limitPerStudent: 1, order: 3 },
+  { id: "item-default-3", name: "选同桌券", description: "选择下周的同桌", cost: 40, icon: "🤝", type: "privilege", stock: 10, limitPerStudent: 1, order: 4 },
+  { id: "item-default-8", name: "小组长体验", description: "当一周小组长", cost: 40, icon: "🧑‍🏫", type: "privilege", stock: 8, limitPerStudent: 1, order: 5 },
+  { id: "item-default-1", name: "免作业卡", description: "免写一次作业", cost: 50, icon: "🎫", type: "privilege", stock: 10, limitPerStudent: 1, order: 6 },
+  { id: "item-default-4", name: "当一天班长", description: "体验一天班长", cost: 60, icon: "👑", type: "privilege", stock: 6, limitPerStudent: 1, order: 7 },
 ]
 
 const createEmptyShopItem = (): ShopItem => ({
@@ -788,23 +789,33 @@ const Settings = () => {
       >
         <div>
           <h3 className="text-lg font-semibold text-text-primary">成长阈值</h3>
-          <p className="mt-1 text-xs text-text-tertiary">每个等级需要的累计积分，决定幻兽的进化节奏</p>
+          <p className="mt-1 text-xs text-text-tertiary">每个等级需要的累计成长值，决定幻兽的进化节奏</p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            {settings.levelThresholds.map((value, index) => (
-              <label key={index} className="text-xs text-text-secondary">
-                Lv.{index + 1}
-                <input
-                  type="number"
-                  value={value}
-                  onChange={(event) => {
-                    const next = [...settings.levelThresholds]
-                    next[index] = Number(event.target.value)
-                    setSettings((prev) => ({ ...prev, levelThresholds: next }))
-                  }}
-                  className="mt-2 w-full rounded-2xl border border-gray-200 px-3 py-2"
-                />
-              </label>
-            ))}
+            {settings.levelThresholds.map((value, index) => {
+              const level = index + 1
+              const stage = getEvolutionStage(level)
+              const name = stageNames[stage]
+              const isMaxLevel = level === 10
+              const stageIcons: Record<string, string> = { egg: "🥚", baby: "👶", juvenile: "🧒", adult: "💪", ultimate: "👑" }
+              return (
+                <label key={index} className="text-xs text-text-secondary">
+                  <span className="flex items-center gap-1">
+                    Lv.{level}
+                    <span className="text-text-tertiary">{stageIcons[stage]} {isMaxLevel ? "满级" : name}</span>
+                  </span>
+                  <input
+                    type="number"
+                    value={value}
+                    onChange={(event) => {
+                      const next = [...settings.levelThresholds]
+                      next[index] = Number(event.target.value)
+                      setSettings((prev) => ({ ...prev, levelThresholds: next }))
+                    }}
+                    className="mt-2 w-full rounded-2xl border border-gray-200 px-3 py-2"
+                  />
+                </label>
+              )
+            })}
           </div>
         </div>
 

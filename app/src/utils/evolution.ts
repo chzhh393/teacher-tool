@@ -1,10 +1,10 @@
 import type { EvolutionStage } from "../data/beasts"
 
 export const getEvolutionStage = (level: number): EvolutionStage => {
-  if (level <= 1) return "egg"
-  if (level <= 3) return "baby"
-  if (level <= 5) return "juvenile"
-  if (level <= 7) return "adult"
+  if (level <= 2) return "egg"
+  if (level <= 4) return "baby"
+  if (level <= 6) return "juvenile"
+  if (level <= 8) return "adult"
   return "ultimate"
 }
 

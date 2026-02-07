@@ -28,10 +28,7 @@ exports.main = async (event = {}) => {
       if ((b.badges || 0) !== (a.badges || 0)) {
         return (b.badges || 0) - (a.badges || 0)
       }
-      if ((b.level || 0) !== (a.level || 0)) {
-        return (b.level || 0) - (a.level || 0)
-      }
-      return (b.totalScore || 0) - (a.totalScore || 0)
+      return (b.earnedScore || 0) - (a.earnedScore || 0)
     })
     .slice(0, 10)
 

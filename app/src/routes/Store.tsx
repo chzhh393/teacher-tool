@@ -81,6 +81,7 @@ const Store = () => {
       <div className="card p-6 border border-gray-100">
         <h2 className="text-2xl font-bold text-text-primary">小卖部</h2>
         <p className="mt-2 text-sm text-text-secondary">学生可用积分兑换奖励或装饰品。</p>
+        <p className="mt-1 text-xs text-text-tertiary">可用积分 = 累计积分 - 已兑换，兑换后扣减；成长值决定幻兽等级，领养新幻兽后重新计算。</p>
       </div>
 
       <div className="flex gap-3">
@@ -218,7 +219,7 @@ const Store = () => {
           ) : null}
           {selectedStudent && selectedItem ? (
             <p className={`text-xs ${hasEnoughScore ? "text-text-tertiary" : "text-danger"}`}>
-              学生可用积分：{selectedStudent.availableScore}
+              可用积分：{selectedStudent.availableScore}
               {hasEnoughScore ? "" : "（不足）"}
             </p>
           ) : null}

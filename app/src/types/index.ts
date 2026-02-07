@@ -20,6 +20,8 @@ export interface Student {
   totalScore: number
   availableScore: number
   badges: number
+  collectedBeasts?: string[]
+  earnedScore?: number
   progress: number
   lastScoreTime?: string
   order?: number
