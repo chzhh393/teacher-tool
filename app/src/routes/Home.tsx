@@ -6,6 +6,7 @@ import EvolutionCelebration, { type EvolutionEvent } from "../components/Evoluti
 import RevokeBar from "../components/RevokeBar"
 import ScoreModal from "../components/ScoreModal"
 import { beasts } from "../data/beasts"
+import { getDefaultSettings } from "../data/defaults"
 import { signInAnonymously } from "../lib/cloudbaseAuth"
 import { CloudApi } from "../services/cloudApi"
 import { useClassStore } from "../stores/classStore"
@@ -61,10 +62,16 @@ const Home = () => {
     }
 
     try {
-      const settingsResult = await CloudApi.settingsGet({
-        classId: summaryResult.classSummary?.id || activeClassId,
-      })
-      setRules(settingsResult.settings?.scoreRules || [])
+      const effectiveId = summaryResult.classSummary?.id || activeClassId
+      const settingsResult = await CloudApi.settingsGet({ classId: effectiveId })
+      const remoteRules = settingsResult.settings?.scoreRules
+      if (remoteRules && remoteRules.length > 0) {
+        setRules(remoteRules)
+      } else {
+        const defaults = getDefaultSettings()
+        setRules(defaults.scoreRules)
+        CloudApi.settingsSave({ classId: effectiveId, settings: defaults }).catch(console.error)
+      }
     } catch (error) {
       setRules([])
     }
@@ -211,10 +218,16 @@ const Home = () => {
       }
 
       try {
-        const settingsResult = await CloudApi.settingsGet({
-          classId: summaryResult.classSummary?.id || activeClassId,
-        })
-        setRules(settingsResult.settings?.scoreRules || [])
+        const effectiveId = summaryResult.classSummary?.id || activeClassId
+        const settingsResult = await CloudApi.settingsGet({ classId: effectiveId })
+        const remoteRules = settingsResult.settings?.scoreRules
+        if (remoteRules && remoteRules.length > 0) {
+          setRules(remoteRules)
+        } else {
+          const defaults = getDefaultSettings()
+          setRules(defaults.scoreRules)
+          CloudApi.settingsSave({ classId: effectiveId, settings: defaults }).catch(console.error)
+        }
       } catch {
         setRules([])
       }

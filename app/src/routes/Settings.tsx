@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { Reorder, useDragControls } from "framer-motion"
 import { useNavigate } from "react-router-dom"
 
 import { beasts } from "../data/beasts"
@@ -9,27 +10,7 @@ import { useAuthStore } from "../stores/authStore"
 import { useClassStore } from "../stores/classStore"
 import type { ClassInfo, ClassSettings, ScoreRule, ShopItem, Student } from "../types"
 import { normalizeShopItems, normalizeStudents } from "../utils/normalize"
-
-const getDefaultSettings = (): ClassSettings => ({
-  systemName: "幻兽学院",
-  themeColor: "coral",
-  levelThresholds: [0, 5, 12, 22, 35, 50, 70, 95, 125, 160],
-  scoreRules: [
-    { id: "rule-01", name: "早读打卡", score: 1, icon: "📖", pinyin: "zddk", order: 1, type: "add" },
-    { id: "rule-02", name: "答对问题", score: 2, icon: "💡", pinyin: "ddwt", order: 2, type: "add" },
-    { id: "rule-03", name: "作业优秀", score: 3, icon: "⭐", pinyin: "zyyx", order: 3, type: "add" },
-    { id: "rule-04", name: "完成背诵", score: 2, icon: "🎤", pinyin: "wcbs", order: 4, type: "add" },
-    { id: "rule-05", name: "积极举手", score: 1, icon: "✋", pinyin: "jjjs", order: 5, type: "add" },
-    { id: "rule-06", name: "帮助同学", score: 2, icon: "❤️", pinyin: "bztx", order: 6, type: "add" },
-    { id: "rule-07", name: "值日认真", score: 2, icon: "✨", pinyin: "zrrz", order: 7, type: "add" },
-    { id: "rule-08", name: "课外阅读", score: 1, icon: "📚", pinyin: "kwyd", order: 8, type: "add" },
-    { id: "rule-09", name: "进步明显", score: 3, icon: "🌱", pinyin: "jbmx", order: 9, type: "add" },
-    { id: "rule-11", name: "迟到", score: -1, icon: "⏰", pinyin: "cd", order: 101, type: "subtract" },
-    { id: "rule-12", name: "课堂讲话", score: -2, icon: "🗣️", pinyin: "ktjh", order: 102, type: "subtract" },
-    { id: "rule-13", name: "打瞌睡", score: -1, icon: "😴", pinyin: "dks", order: 103, type: "subtract" },
-    { id: "rule-14", name: "未交作业", score: -2, icon: "❌", pinyin: "wjzy", order: 104, type: "subtract" },
-  ],
-})
+import { getDefaultSettings } from "../data/defaults"
 
 const getDefaultShopItems = (): ShopItem[] => [
   { id: "item-default-1", name: "免作业卡", description: "免写一次作业", cost: 50, icon: "🎫", type: "privilege", stock: 10, limitPerStudent: 1, order: 0 },
@@ -63,6 +44,25 @@ const createEmptyRule = (type: "add" | "subtract"): ScoreRule => ({
   order: Date.now(),
   type,
 })
+
+const DragItem = ({ value, children }: { value: unknown; children: React.ReactNode }) => {
+  const controls = useDragControls()
+  return (
+    <Reorder.Item
+      value={value}
+      dragListener={false}
+      dragControls={controls}
+      className="flex flex-wrap items-center gap-2 rounded-2xl bg-white px-3 py-2"
+    >
+      <span
+        className="cursor-grab active:cursor-grabbing text-text-tertiary select-none touch-none"
+        onPointerDown={(e) => controls.start(e)}
+        title="拖动排序"
+      >⠿</span>
+      {children}
+    </Reorder.Item>
+  )
+}
 
 const Settings = () => {
   const storedClassId = useClassStore.getState().classId
@@ -405,6 +405,24 @@ const Settings = () => {
       ...prev,
       scoreRules: prev.scoreRules.filter((rule) => rule.id !== ruleId),
     }))
+  }
+
+  const handleReorderAddRules = (newAddRules: ScoreRule[]) => {
+    setSettings((prev) => ({
+      ...prev,
+      scoreRules: [...newAddRules, ...prev.scoreRules.filter((r) => r.type === "subtract")],
+    }))
+  }
+
+  const handleReorderSubtractRules = (newSubtractRules: ScoreRule[]) => {
+    setSettings((prev) => ({
+      ...prev,
+      scoreRules: [...prev.scoreRules.filter((r) => r.type === "add"), ...newSubtractRules],
+    }))
+  }
+
+  const handleReorderShopItems = (newItems: ShopItem[]) => {
+    setShopItems(newItems)
   }
 
   const handleShopItemUpdate = (itemId: string, patch: Partial<ShopItem>) => {
@@ -813,12 +831,15 @@ const Settings = () => {
             </div>
           </div>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
-            {[{ label: "加分项", data: addRules }, { label: "扣分项", data: subtractRules }].map((group) => (
+            {[
+              { label: "加分项", data: addRules, onReorder: handleReorderAddRules },
+              { label: "扣分项", data: subtractRules, onReorder: handleReorderSubtractRules },
+            ].map((group) => (
               <div key={group.label} className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
                 <p className="text-sm font-semibold text-text-primary">{group.label}</p>
-                <div className="mt-3 space-y-3">
+                <Reorder.Group axis="y" values={group.data} onReorder={group.onReorder} className="mt-3 space-y-3">
                   {group.data.map((rule) => (
-                    <div key={rule.id} className="flex flex-wrap items-center gap-2 rounded-2xl bg-white px-3 py-2">
+                    <DragItem key={rule.id} value={rule}>
                       <input
                         value={rule.icon}
                         onChange={(event) => handleRuleUpdate(rule.id, { icon: event.target.value })}
@@ -843,9 +864,9 @@ const Settings = () => {
                       >
                         删除
                       </button>
-                    </div>
+                    </DragItem>
                   ))}
-                </div>
+                </Reorder.Group>
               </div>
             ))}
           </div>
@@ -868,10 +889,10 @@ const Settings = () => {
           </button>
         </div>
         <div className="mt-4 rounded-2xl border border-gray-100 bg-gray-50 p-4">
-          <div className="space-y-3">
-            {shopItems.length > 0 ? (
-              shopItems.map((item) => (
-                <div key={item.id} className="flex flex-wrap items-center gap-2 rounded-2xl bg-white px-3 py-2">
+          {shopItems.length > 0 ? (
+            <Reorder.Group axis="y" values={shopItems} onReorder={handleReorderShopItems} className="space-y-3">
+              {shopItems.map((item) => (
+                <DragItem key={item.id} value={item}>
                   <input
                     value={item.icon}
                     onChange={(e) => handleShopItemUpdate(item.id, { icon: e.target.value })}
@@ -914,12 +935,12 @@ const Settings = () => {
                   >
                     删除
                   </button>
-                </div>
-              ))
-            ) : (
-              <p className="py-4 text-center text-sm text-text-tertiary">暂无商品，请添加</p>
-            )}
-          </div>
+                </DragItem>
+              ))}
+            </Reorder.Group>
+          ) : (
+            <p className="py-4 text-center text-sm text-text-tertiary">暂无商品，请添加</p>
+          )}
         </div>
       </section>
 
