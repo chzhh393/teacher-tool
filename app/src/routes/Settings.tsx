@@ -217,6 +217,18 @@ const Settings = () => {
       showNotice("请先选择或创建一个班级", "error")
       return
     }
+    // 校验积分规则
+    const emptyRule = settings.scoreRules.find((r) => !r.name.trim())
+    if (emptyRule) {
+      showNotice("积分规则名称不能为空，请检查后重试", "error")
+      return
+    }
+    // 校验小卖部商品
+    const emptyShopItem = shopItems.find((item) => !item.name.trim())
+    if (emptyShopItem) {
+      showNotice("商品名称不能为空，请检查后重试", "error")
+      return
+    }
     setLoading(true)
     clearNotice()
     try {

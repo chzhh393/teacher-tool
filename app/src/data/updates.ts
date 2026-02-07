@@ -12,6 +12,19 @@ export interface UpdateEntry {
 
 export const updates: UpdateEntry[] = [
   {
+    id: "honor-board-upgrade",
+    date: "2026-02-08",
+    version: "v1.1.0",
+    title: "光荣榜全新升级",
+    summary: "徽章展示收集的满级幻兽，积分体系更清晰。",
+    highlights: [
+      "满级幻兽自动记录为徽章，光荣榜展示收集图鉴，悬停可查看大图",
+      "新增累计积分：历史总获得，不受兑换和换幻兽影响，排名更公平",
+      "成长值决定幻兽等级，可用积分用于小卖部兑换，概念一目了然",
+    ],
+    tags: ["功能", "优化"],
+  },
+  {
     id: "sort-settings",
     date: "2026-02-07",
     version: "v1.0.9",

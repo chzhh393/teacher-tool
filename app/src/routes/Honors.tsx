@@ -1,13 +1,21 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import { CloudApi } from "../services/cloudApi"
-import { beasts } from "../data/beasts"
+import { beasts, type Beast } from "../data/beasts"
 import type { Student } from "../types"
 import { normalizeStudents } from "../utils/normalize"
 import { useClassStore } from "../stores/classStore"
 
+interface HoverInfo {
+  beast: Beast
+  x: number
+  y: number
+}
+
 const Honors = () => {
   const [ranks, setRanks] = useState<Student[]>([])
+  const [hover, setHover] = useState<HoverInfo | null>(null)
+  const hoverTimeout = useRef<number>(0)
   const { classId } = useClassStore()
 
   useEffect(() => {
@@ -72,8 +80,15 @@ const Honors = () => {
                           key={beast!.id}
                           src={beast!.images.ultimate}
                           alt={beast!.name}
-                          title={beast!.name}
-                          className="h-8 w-8 rounded-full border-2 border-white object-contain bg-amber-50"
+                          className="h-8 w-8 cursor-pointer rounded-full border-2 border-white object-contain bg-amber-50 transition-transform hover:scale-110 hover:z-10"
+                          onMouseEnter={(e) => {
+                            window.clearTimeout(hoverTimeout.current)
+                            const rect = e.currentTarget.getBoundingClientRect()
+                            setHover({ beast: beast!, x: rect.left + rect.width / 2, y: rect.top })
+                          }}
+                          onMouseLeave={() => {
+                            hoverTimeout.current = window.setTimeout(() => setHover(null), 150)
+                          }}
                         />
                       ))}
                     </div>
@@ -89,6 +104,22 @@ const Honors = () => {
           })}
         </div>
       </div>
+
+      {hover && (
+        <div
+          className="pointer-events-none fixed z-50 flex flex-col items-center"
+          style={{ left: hover.x, top: hover.y, transform: "translate(-50%, -110%)" }}
+        >
+          <div className="rounded-2xl bg-white p-3 shadow-xl border border-gray-100">
+            <img
+              src={hover.beast.images.ultimate}
+              alt={hover.beast.name}
+              className="h-32 w-32 object-contain"
+            />
+            <p className="mt-1 text-center text-sm font-semibold text-text-primary">{hover.beast.name}</p>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
