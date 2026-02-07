@@ -2,6 +2,40 @@
 
 本文件记录幻兽学院项目的版本变更历史。
 
+## v1.0.7 (2026-02-07)
+
+### 变更
+- 领养幻兽弹窗默认展示蛋形态（原为幼年形态），让学生从孵蛋开始体验养成过程
+- PWA 图标更换为幻兽蛋主题图标（`pwa-egg-192x192.png`、`pwa-egg-512x512.png`），删除旧占位图标
+- 安装引导页面默认显示"电脑/希沃"教程（原默认 iPhone），Tab 顺序调整为：电脑/希沃 → iPhone/iPad → Android
+- 安装引导电脑端教程增加希沃一体机说明，提示希沃自带浏览器可直接操作
+- 登录页"安装应用到桌面"提示从文字链接改为卡片样式，更醒目
+
+## v1.0.6 (2026-02-07)
+
+### 新增
+- **PWA 支持**：应用可安装到手机桌面或电脑，像原生 App 一样全屏使用
+  - 集成 `vite-plugin-pwa`，自动生成 Service Worker 和 Web App Manifest
+  - 离线缓存：静态资源预缓存（330+ 文件），幻兽图片 CacheFirst（30 天），API 请求 NetworkFirst（超时 5 秒降级缓存）
+  - `index.html` 添加 `theme-color`、`apple-mobile-web-app-capable` 等 meta 标签
+  - `main.tsx` 注册 Service Worker（autoUpdate 模式）
+- **安装引导页面**（`/install-guide`）：分平台教用户安装到桌面
+  - 支持电脑/希沃、iPhone/iPad、Android 三个平台切换
+  - 每个平台 4 步图文教程，电脑端第 2 步附截图指示安装按钮位置
+  - 包含微信/QQ 内打开的特别提示和浏览器兼容说明
+- **登录页安装入口**：Auth 页面底部新增"安装应用到桌面"卡片式提示，点击跳转安装指南
+
+### 变更
+- `vite.config.ts` 添加 VitePWA 插件配置
+- `tsconfig.app.json` 添加 `vite-plugin-pwa/client` 类型声明
+- `App.tsx` 注册 `/install-guide` 公开路由
+
+### 新增文件
+- `app/src/routes/InstallGuide.tsx` — 安装指南页面
+- `app/public/pwa-egg-192x192.png` — PWA 图标（幻兽蛋）
+- `app/public/pwa-egg-512x512.png` — PWA 图标（幻兽蛋）
+- `app/public/guide2.png` — 电脑端安装按钮截图
+
 ## v1.0.5 (2026-02-07)
 
 ### 新增

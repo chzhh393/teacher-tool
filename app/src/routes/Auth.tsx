@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 
 import { signInAnonymously } from "../lib/cloudbaseAuth"
 import { CloudApi } from "../services/cloudApi"
@@ -238,6 +238,19 @@ const Auth = () => {
             {loading ? <p className="mt-2 text-center text-xs text-text-secondary">处理中...</p> : null}
           </div>
         </div>
+
+        {/* 安装到桌面提示 */}
+        <Link
+          to="/install-guide"
+          className="mt-4 flex items-center gap-3 rounded-2xl bg-white/80 border border-primary/20 px-5 py-3.5 shadow-sm hover:shadow-md hover:border-primary/40 transition-all"
+        >
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-lg">+</span>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-text-primary">安装应用到桌面</p>
+            <p className="text-xs text-text-secondary">像 App 一样打开，全屏体验更流畅</p>
+          </div>
+          <span className="ml-auto text-text-tertiary text-sm">&rsaquo;</span>
+        </Link>
       </div>
     </div>
   )

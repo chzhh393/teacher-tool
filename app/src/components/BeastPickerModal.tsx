@@ -54,7 +54,7 @@ const BeastPickerModal = ({ open, onClose, onSelect }: BeastPickerModalProps) =>
           >
             <div className="aspect-square rounded-xl bg-gray-50 p-2 mb-2 flex items-center justify-center">
               <img
-                src={beast.images.baby}
+                src={beast.images.egg}
                 alt={beast.name}
                 className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-110 drop-shadow-sm"
               />

@@ -7,6 +7,7 @@ import ActivationAdmin from "./routes/admin/ActivationAdmin"
 import BeastAdmin from "./routes/admin/BeastAdmin"
 import Activate from "./routes/Activate"
 import Auth from "./routes/Auth"
+import InstallGuide from "./routes/InstallGuide"
 import Honors from "./routes/Honors"
 import Home from "./routes/Home"
 import Records from "./routes/Records"
@@ -44,6 +45,7 @@ const App = () => {
     <HashRouter>
       <Routes>
         <Route path="/auth" element={<Auth />} />
+        <Route path="/install-guide" element={<InstallGuide />} />
         <Route path="/activate" element={<Activate />} />
         <Route element={<RequireAuth />}>
           <Route element={<AppShell />}>
