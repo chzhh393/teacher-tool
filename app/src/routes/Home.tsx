@@ -267,13 +267,14 @@ const Home = () => {
     setPickerOpen(false)
     setIsLoading(true)
     try {
-      await CloudApi.studentUpsert({
-        student: {
-          ...activeStudent,
-          beastId: beast.id,
-          beastName: beast.name,
-        },
-      })
+      const isMaxLevel = activeStudent.level >= 10
+      const studentData = {
+        ...activeStudent,
+        beastId: beast.id,
+        beastName: beast.name,
+        ...(isMaxLevel ? { totalScore: 0, level: 1, progress: 0 } : {}),
+      }
+      await CloudApi.studentUpsert({ student: studentData })
       await refresh(classId)
     } finally {
       setIsLoading(false)
@@ -347,6 +348,7 @@ const Home = () => {
           const stage = getEvolutionStage(student.level)
           const stageName = stageNames[stage]
           const isFeeding = feedingIds.includes(student.id)
+          const isMaxLevel = student.level >= 10
           return (
             <div
               key={student.id}
@@ -378,12 +380,12 @@ const Home = () => {
               ) : null}
               <div className="flex items-center justify-between mb-3">
                 <p className="text-base font-bold text-text-primary">{student.name}</p>
-                <span className="rounded-lg bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
-                  Lv.{student.level}
+                <span className={`rounded-lg px-2 py-0.5 text-xs font-semibold ${isMaxLevel ? "bg-amber-100 text-amber-700" : "bg-primary/10 text-primary"}`}>
+                  {isMaxLevel ? "MAX" : `Lv.${student.level}`}
                 </span>
               </div>
 
-              <div className={`aspect-square rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 p-4 flex items-center justify-center overflow-hidden ${isFeeding ? "bg-gradient-to-br from-primary/10 to-primary/5" : ""}`}>
+              <div className={`aspect-square rounded-2xl p-4 flex items-center justify-center overflow-hidden ${isMaxLevel ? "bg-gradient-to-br from-amber-50 to-orange-50 ring-2 ring-amber-300/50" : isFeeding ? "bg-gradient-to-br from-primary/10 to-primary/5" : "bg-gradient-to-br from-gray-50 to-gray-100"}`}>
                 {beast ? (
                   <img
                     src={beast.images[stage]}
@@ -401,7 +403,11 @@ const Home = () => {
               <div className="mt-3 flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-text-secondary">{beast?.name || "未领养"}</p>
-                  {beast && <p className="text-xs text-text-tertiary">{stageName}形态</p>}
+                  {beast && (
+                    <p className="text-xs text-text-tertiary">
+                      {isMaxLevel ? "已收集完成 🏆" : `${stageName}形态`}
+                    </p>
+                  )}
                 </div>
                 <button
                   type="button"
@@ -410,21 +416,24 @@ const Home = () => {
                     setActiveStudent(student)
                     setPickerOpen(true)
                   }}
-                  className="rounded-lg border border-gray-200 px-2 py-1 text-xs font-semibold text-text-secondary transition-colors hover:border-primary hover:text-primary hover:bg-primary/5"
+                  className={`rounded-lg border px-2 py-1 text-xs font-semibold transition-colors ${isMaxLevel
+                    ? "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                    : "border-gray-200 text-text-secondary hover:border-primary hover:text-primary hover:bg-primary/5"
+                  }`}
                 >
-                  {beast ? "更换" : "领养"}
+                  {isMaxLevel ? "领养新幻兽" : beast ? "更换" : "领养"}
                 </button>
               </div>
 
               <div className="mt-3">
                 <div className="flex items-center justify-between text-xs text-text-tertiary mb-1">
-                  <span>进度 {student.progress}%</span>
+                  <span>{isMaxLevel ? "收集完成" : `进度 ${student.progress}%`}</span>
                   <span>积分 {student.availableScore}</span>
                 </div>
                 <div className="h-1.5 w-full rounded-full bg-gray-100 overflow-hidden">
                   <div
-                    className={`h-full rounded-full transition-all duration-500 ${isFeeding ? "bg-gradient-to-r from-primary via-primary/70 to-primary animate-pulse" : "bg-primary"}`}
-                    style={{ width: `${student.progress}%` }}
+                    className={`h-full rounded-full transition-all duration-500 ${isMaxLevel ? "bg-gradient-to-r from-amber-400 to-orange-400" : isFeeding ? "bg-gradient-to-r from-primary via-primary/70 to-primary animate-pulse" : "bg-primary"}`}
+                    style={{ width: isMaxLevel ? "100%" : `${student.progress}%` }}
                   />
                 </div>
                 {isFeeding && (

@@ -52,7 +52,9 @@ exports.main = async (event = {}) => {
       continue
     }
     const previousLevel = raw.level || 1
-    const nextTotalScore = Math.max(0, (raw.totalScore || 0) + score)
+    const maxTotalScore = thresholds[thresholds.length - 1] || 160
+    const rawNextTotalScore = Math.max(0, (raw.totalScore || 0) + score)
+    const nextTotalScore = score > 0 ? Math.min(rawNextTotalScore, maxTotalScore) : rawNextTotalScore
     const nextAvailable = Math.max(0, (raw.availableScore || 0) + score)
     const { level, progress } = computeLevel(nextTotalScore, thresholds)
     const nextBadges = level === 10 && previousLevel < 10 ? (raw.badges || 0) + 1 : raw.badges || 0

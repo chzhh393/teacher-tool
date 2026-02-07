@@ -13,7 +13,7 @@ import { normalizeShopItems, normalizeStudents } from "../utils/normalize"
 const getDefaultSettings = (): ClassSettings => ({
   systemName: "幻兽学院",
   themeColor: "coral",
-  levelThresholds: [0, 5, 12, 22, 35, 50, 65, 80, 90, 100],
+  levelThresholds: [0, 5, 12, 22, 35, 50, 70, 95, 125, 160],
   scoreRules: [
     { id: "rule-01", name: "早读打卡", score: 1, icon: "📖", pinyin: "zddk", order: 1, type: "add" },
     { id: "rule-02", name: "答对问题", score: 2, icon: "💡", pinyin: "ddwt", order: 2, type: "add" },
@@ -84,6 +84,7 @@ const Settings = () => {
   const [renameName, setRenameName] = useState("")
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [excelModalOpen, setExcelModalOpen] = useState(false)
+  const [contactOpen, setContactOpen] = useState(false)
   const [activeSection, setActiveSection] = useState("class")
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({ class: null, students: null, rules: null, shop: null })
   const [loading, setLoading] = useState(false)
@@ -182,8 +183,9 @@ const Settings = () => {
           levelThresholds: remoteSettings.levelThresholds || fallbackSettings.levelThresholds,
         })
       } else {
-        // 新班级没有保存过设置，重置为默认值
+        // 新班级没有保存过设置，重置为默认值并自动保存到数据库
         setSettings(fallbackSettings)
+        CloudApi.settingsSave({ classId: effectiveClassId, settings: fallbackSettings }).catch(console.error)
       }
       setStudents(normalizeStudents(studentResult.students || []))
       const remoteShopItems = normalizeShopItems(shopResult.items || [])
@@ -1055,6 +1057,28 @@ const Settings = () => {
         onImport={handleExcelImport}
         loading={loading}
       />
+
+      {/* 联系作者浮窗 */}
+      <button
+        type="button"
+        onClick={() => setContactOpen(true)}
+        className="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-white shadow-lg transition-transform hover:scale-110 active:scale-95"
+        title="联系作者"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+        </svg>
+      </button>
+      <Modal
+        open={contactOpen}
+        onClose={() => setContactOpen(false)}
+        title="联系作者"
+        description="扫描下方二维码添加微信"
+      >
+        <div className="flex justify-center">
+          <img src="/wx.jpg" alt="微信二维码" className="w-64 rounded-xl" />
+        </div>
+      </Modal>
     </div>
   )
 }
