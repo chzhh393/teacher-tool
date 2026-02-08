@@ -81,6 +81,8 @@ const Settings = () => {
   const [batchText, setBatchText] = useState("")
   const [createModalOpen, setCreateModalOpen] = useState(false)
   const [createName, setCreateName] = useState("")
+  const [templateSource, setTemplateSource] = useState<"default" | "copy">("default")
+  const [sourceClassId, setSourceClassId] = useState("")
   const [renameModalOpen, setRenameModalOpen] = useState(false)
   const [renameName, setRenameName] = useState("")
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
@@ -452,6 +454,8 @@ const Settings = () => {
 
   const handleClassCreate = () => {
     setCreateName("")
+    setTemplateSource("default")
+    setSourceClassId("")
     setCreateModalOpen(true)
   }
 
@@ -459,6 +463,10 @@ const Settings = () => {
     const name = createName.trim()
     if (!name) {
       showNotice("请输入新班级名称", "error")
+      return
+    }
+    if (templateSource === "copy" && !sourceClassId) {
+      showNotice("请选择要复制设置的源班级", "error")
       return
     }
     if (!token) {
@@ -471,6 +479,34 @@ const Settings = () => {
     clearNotice()
     try {
       const result = await CloudApi.classUpsert({ classInfo: { id: `class-${Date.now()}`, name: name.trim() } })
+      const newClassId = result.classInfo.id
+
+      // 从已有班级复制设置和商品
+      if (templateSource === "copy" && sourceClassId) {
+        const [sourceSettingsResult, sourceShopResult] = await Promise.all([
+          CloudApi.settingsGet({ classId: sourceClassId }),
+          CloudApi.shopList({ classId: sourceClassId }),
+        ])
+        const fallbackSettings = getDefaultSettings()
+        const sourceSettings = sourceSettingsResult.settings
+        const newSettings = sourceSettings
+          ? {
+              ...fallbackSettings,
+              ...sourceSettings,
+              id: undefined,
+              classId: undefined,
+              scoreRules: sourceSettings.scoreRules || fallbackSettings.scoreRules,
+              levelThresholds: sourceSettings.levelThresholds || fallbackSettings.levelThresholds,
+            }
+          : fallbackSettings
+        const sourceShopItems = normalizeShopItems(sourceShopResult.items || [])
+        const newShopItems = sourceShopItems.length > 0 ? sourceShopItems : getDefaultShopItems()
+        await Promise.all([
+          CloudApi.settingsSave({ classId: newClassId, settings: newSettings }),
+          CloudApi.shopSave({ classId: newClassId, items: newShopItems }),
+        ])
+      }
+
       setClassInfo(result.classInfo)
       setClass(result.classInfo.id, result.classInfo.name)
       // 新班级没有学生，只需刷新班级列表
@@ -998,7 +1034,7 @@ const Settings = () => {
         open={createModalOpen}
         onClose={() => setCreateModalOpen(false)}
         title="新建班级"
-        description="请输入新的班级名称"
+        description="请输入班级名称并选择初始模板"
         footer={(
           <>
             <button
@@ -1019,15 +1055,63 @@ const Settings = () => {
           </>
         )}
       >
-        <div className="space-y-3">
-          <label className="text-sm font-semibold text-text-primary">班级名称</label>
-          <input
-            value={createName}
-            onChange={(event) => setCreateName(event.target.value)}
-            placeholder="例如：三年三班"
-            className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
-          />
-          <p className="text-xs text-text-tertiary">名称将用于班级切换与统计展示</p>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-text-primary">班级名称</label>
+            <input
+              value={createName}
+              onChange={(event) => setCreateName(event.target.value)}
+              placeholder="例如：三年三班"
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-text-primary">初始设置</label>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => { setTemplateSource("default"); setSourceClassId("") }}
+                className={`rounded-xl border px-3 py-2.5 text-left text-sm transition-colors ${
+                  templateSource === "default"
+                    ? "border-primary bg-primary/10 text-primary font-semibold"
+                    : "border-gray-200 bg-gray-50 text-text-secondary hover:bg-gray-100"
+                }`}
+              >
+                <span className="block font-semibold">默认模板</span>
+                <span className="block mt-0.5 text-xs opacity-70">使用系统预设的积分规则</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setTemplateSource("copy")}
+                disabled={classes.length === 0}
+                className={`rounded-xl border px-3 py-2.5 text-left text-sm transition-colors ${
+                  templateSource === "copy"
+                    ? "border-primary bg-primary/10 text-primary font-semibold"
+                    : "border-gray-200 bg-gray-50 text-text-secondary hover:bg-gray-100"
+                } disabled:cursor-not-allowed disabled:opacity-40`}
+              >
+                <span className="block font-semibold">从已有班级复制</span>
+                <span className="block mt-0.5 text-xs opacity-70">复制规则、阈值和商品</span>
+              </button>
+            </div>
+          </div>
+          {templateSource === "copy" && (
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-text-primary">选择源班级</label>
+              <select
+                value={sourceClassId}
+                onChange={(event) => setSourceClassId(event.target.value)}
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm"
+              >
+                <option value="">请选择班级...</option>
+                {classes.map((cls) => (
+                  <option key={cls.id} value={cls.id}>{cls.name}</option>
+                ))}
+              </select>
+              <p className="text-xs text-text-tertiary">将复制该班级的积分规则、成长阈值和小卖部商品</p>
+            </div>
+          )}
+          <p className="text-xs text-text-tertiary">创建后可在设置页面中继续修改</p>
         </div>
       </Modal>
       <Modal

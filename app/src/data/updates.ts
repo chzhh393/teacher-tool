@@ -12,6 +12,19 @@ export interface UpdateEntry {
 
 export const updates: UpdateEntry[] = [
   {
+    id: "copy-class-settings",
+    date: "2026-02-08",
+    version: "v1.1.2",
+    title: "新建班级支持复制已有班级设置",
+    summary: "创建新班级时可选择从已有班级复制积分规则和商品，不必每次从头配置。",
+    highlights: [
+      "新建班级弹窗新增「初始设置」选择：默认模板或从已有班级复制",
+      "复制内容包括积分规则、成长阈值和小卖部商品",
+      "创建后仍可在设置页面继续个性化修改",
+    ],
+    tags: ["功能"],
+  },
+  {
     id: "honor-board-upgrade",
     date: "2026-02-08",
     version: "v1.1.0",
