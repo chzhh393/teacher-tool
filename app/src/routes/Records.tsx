@@ -11,10 +11,11 @@ const Records = () => {
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [search, setSearch] = useState("")
   const pageSize = 20
   const { classId } = useClassStore()
 
-  const fetchRecords = async () => {
+  const fetchRecords = async (searchName?: string) => {
     if (!classId) {
       setRecords([])
       setTotal(0)
@@ -23,7 +24,12 @@ const Records = () => {
     setLoading(true)
     setError("")
     try {
-      const result = await CloudApi.recordList({ classId, page, pageSize })
+      const result = await CloudApi.recordList({
+        classId,
+        page,
+        pageSize,
+        studentName: searchName ?? search,
+      })
       setRecords(normalizeScoreRecords(result.records || []))
       setTotal(result.total || 0)
     } catch (err) {
@@ -38,6 +44,17 @@ const Records = () => {
   useEffect(() => {
     fetchRecords()
   }, [page, classId])
+
+  const handleSearch = () => {
+    setPage(1)
+    fetchRecords(search)
+  }
+
+  const handleClearSearch = () => {
+    setSearch("")
+    setPage(1)
+    fetchRecords("")
+  }
 
   const handleExport = async () => {
     if (!classId) {
@@ -108,6 +125,32 @@ const Records = () => {
           >
             导出 CSV
           </button>
+        </div>
+        <div className="mt-4 flex gap-2">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+            placeholder="搜索学生姓名..."
+            className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm"
+          />
+          <button
+            type="button"
+            onClick={handleSearch}
+            disabled={loading}
+            className="rounded-xl bg-primary/10 px-4 py-2 text-sm font-semibold text-primary disabled:opacity-50"
+          >
+            搜索
+          </button>
+          {search && (
+            <button
+              type="button"
+              onClick={handleClearSearch}
+              className="rounded-xl border border-gray-200 px-3 py-2 text-sm text-text-secondary"
+            >
+              清除
+            </button>
+          )}
         </div>
       </div>
 

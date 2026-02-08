@@ -44,6 +44,8 @@ exports.main = async (event = {}) => {
   const pageSize = Number(event.pageSize || 20)
   const skip = (page - 1) * pageSize
 
+  const studentName = (event.studentName || "").trim()
+
   const allRecordsResult = await db.collection("TT_score_records").where({ "data.classId": classId }).limit(1000).get()
   const allRecords = (allRecordsResult.data || [])
     .map((item) => {
@@ -55,6 +57,7 @@ exports.main = async (event = {}) => {
         createdAt: formatDate(raw.createdAt),
       }
     })
+    .filter((r) => !studentName || (r.studentName || "").includes(studentName))
     .sort((a, b) => {
       // 按创建时间倒序
       const timeA = a.createdAt || ""

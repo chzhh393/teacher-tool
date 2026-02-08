@@ -84,6 +84,7 @@ export interface TTRecordListRequest {
   classId?: string
   page?: number
   pageSize?: number
+  studentName?: string
 }
 
 export interface TTRecordListResponse {

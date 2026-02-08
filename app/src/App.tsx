@@ -1,10 +1,9 @@
-import { useEffect } from "react"
+import { lazy, Suspense, useEffect } from "react"
+import type { ReactNode } from "react"
 import { HashRouter, Route, Routes } from "react-router-dom"
 
 import AppShell from "./components/AppShell"
 import RequireAuth from "./components/RequireAuth"
-import ActivationAdmin from "./routes/admin/ActivationAdmin"
-import BeastAdmin from "./routes/admin/BeastAdmin"
 import Activate from "./routes/Activate"
 import Auth from "./routes/Auth"
 import InstallGuide from "./routes/InstallGuide"
@@ -16,6 +15,21 @@ import Store from "./routes/Store"
 import Updates from "./routes/Updates"
 import { CloudApi } from "./services/cloudApi"
 import { useAuthStore } from "./stores/authStore"
+
+// 后台管理页面仅在开发模式下加载，生产构建会 tree-shake 掉
+let adminRoutes: ReactNode = null
+if (import.meta.env.DEV) {
+  const ActivationAdmin = lazy(() => import("./routes/admin/ActivationAdmin"))
+  const BeastAdmin = lazy(() => import("./routes/admin/BeastAdmin"))
+  const OpsAdmin = lazy(() => import("./routes/admin/OpsAdmin"))
+  adminRoutes = (
+    <>
+      <Route path="/activation-admin" element={<Suspense fallback={null}><ActivationAdmin /></Suspense>} />
+      <Route path="/beast-admin" element={<Suspense fallback={null}><BeastAdmin /></Suspense>} />
+      <Route path="/ops-admin" element={<Suspense fallback={null}><OpsAdmin /></Suspense>} />
+    </>
+  )
+}
 
 const App = () => {
   const { token, setAuth, clearAuth, setStatus } = useAuthStore()
@@ -55,8 +69,7 @@ const App = () => {
             <Route path="/records" element={<Records />} />
             <Route path="/updates" element={<Updates />} />
             <Route path="/settings" element={<Settings />} />
-            <Route path="/activation-admin" element={<ActivationAdmin />} />
-            <Route path="/beast-admin" element={<BeastAdmin />} />
+            {adminRoutes}
           </Route>
         </Route>
       </Routes>

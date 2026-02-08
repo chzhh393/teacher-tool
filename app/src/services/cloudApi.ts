@@ -191,4 +191,29 @@ export const CloudApi = {
   authLogout: async (data: { token: string }) => {
     return callCloudFunction<typeof data, { ok: boolean }>("TT_auth_logout", data)
   },
+  opsOverview: async () => {
+    return callCloudFunction<Record<string, never>, {
+      stats: {
+        totalUsers: number
+        activatedUsers: number
+        totalClasses: number
+        totalStudents: number
+      }
+      users: Array<{
+        userId: string
+        username: string
+        activated: boolean
+        createdAt: string | null
+        activatedAt: string | null
+        classCount: number
+        totalStudents: number
+        classes: Array<{
+          id: string
+          name: string
+          studentCount: number
+          createdAt: string | null
+        }>
+      }>
+    }>("TT_ops_overview")
+  },
 }
