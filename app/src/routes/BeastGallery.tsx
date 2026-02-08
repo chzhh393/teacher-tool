@@ -1,6 +1,6 @@
 import { useState } from "react"
 
-import { beasts, type Beast, type EvolutionStage } from "../../data/beasts"
+import { beasts, type Beast, type EvolutionStage } from "../data/beasts"
 
 const STAGES: { key: EvolutionStage; label: string }[] = [
   { key: "egg", label: "蛋" },
@@ -15,7 +15,7 @@ const SERIES_MAP = {
   "hot-blooded": { label: "热血系", color: "bg-red-100 text-red-700" },
 }
 
-const BeastAdmin = () => {
+const BeastGallery = () => {
   const [seriesFilter, setSeriesFilter] = useState<"" | "dreamy" | "hot-blooded">("")
   const [search, setSearch] = useState("")
 
@@ -25,8 +25,7 @@ const BeastAdmin = () => {
       const keyword = search.toLowerCase()
       return (
         beast.name.toLowerCase().includes(keyword) ||
-        beast.englishName.toLowerCase().includes(keyword) ||
-        beast.id.toLowerCase().includes(keyword)
+        beast.englishName.toLowerCase().includes(keyword)
       )
     }
     return true
@@ -39,9 +38,9 @@ const BeastAdmin = () => {
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-text-primary">🐉 幻兽图鉴管理</h2>
+          <h2 className="text-2xl font-bold text-text-primary">幻兽图鉴</h2>
           <p className="mt-1 text-sm text-text-secondary">
-            查看所有幻兽的5个进化形态 · 共 {beasts.length} 只幻兽
+            查看所有幻兽的 5 个进化形态 · 共 {beasts.length} 只
           </p>
         </div>
       </header>
@@ -110,7 +109,6 @@ const BeastCard = ({ beast }: { beast: Beast }) => {
         <span className={`rounded px-2 py-0.5 text-xs font-semibold ${seriesInfo.color}`}>
           {seriesInfo.label}
         </span>
-        <span className="text-xs text-text-tertiary">ID: {beast.id}</span>
       </div>
 
       <div className="grid grid-cols-5 gap-3">
@@ -129,9 +127,6 @@ const BeastCard = ({ beast }: { beast: Beast }) => {
               />
             </div>
             <p className="text-xs font-medium text-text-secondary">{stage.label}</p>
-            <p className="mt-0.5 truncate text-[10px] text-text-tertiary" title={beast.images[stage.key]}>
-              {beast.images[stage.key].split("/").pop()}
-            </p>
           </div>
         ))}
       </div>
@@ -139,4 +134,4 @@ const BeastCard = ({ beast }: { beast: Beast }) => {
   )
 }
 
-export default BeastAdmin
+export default BeastGallery

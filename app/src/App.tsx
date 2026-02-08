@@ -12,6 +12,7 @@ import Home from "./routes/Home"
 import Records from "./routes/Records"
 import Settings from "./routes/Settings"
 import Store from "./routes/Store"
+import BeastGallery from "./routes/BeastGallery"
 import Updates from "./routes/Updates"
 import WeChatBind from "./routes/WeChatBind"
 import { CloudApi } from "./services/cloudApi"
@@ -22,12 +23,10 @@ import { signInAnonymously } from "./lib/cloudbaseAuth"
 let adminRoutes: ReactNode = null
 if (import.meta.env.DEV) {
   const ActivationAdmin = lazy(() => import("./routes/admin/ActivationAdmin"))
-  const BeastAdmin = lazy(() => import("./routes/admin/BeastAdmin"))
   const OpsAdmin = lazy(() => import("./routes/admin/OpsAdmin"))
   adminRoutes = (
     <>
       <Route path="/activation-admin" element={<Suspense fallback={null}><ActivationAdmin /></Suspense>} />
-      <Route path="/beast-admin" element={<Suspense fallback={null}><BeastAdmin /></Suspense>} />
       <Route path="/ops-admin" element={<Suspense fallback={null}><OpsAdmin /></Suspense>} />
     </>
   )
@@ -138,6 +137,7 @@ const App = () => {
             <Route path="/records" element={<Records />} />
             <Route path="/updates" element={<Updates />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/beast-gallery" element={<BeastGallery />} />
             {adminRoutes}
           </Route>
         </Route>

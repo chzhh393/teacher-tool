@@ -657,7 +657,7 @@ const Settings = () => {
     { key: "rules", label: "成长与积分" },
     { key: "shop", label: "小卖部" },
     { key: "subaccounts", label: "子账号管理" },
-    { key: "beast-admin", label: "幻兽浏览", href: "/beast-admin" },
+    { key: "beast-gallery", label: "幻兽图鉴", href: "/beast-gallery" },
     // { key: "account", label: "账号" },  // 暂时隐藏，等微信开放平台网站应用审核通过后启用
   ]
 
