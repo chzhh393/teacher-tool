@@ -2,11 +2,15 @@ import { useEffect, useState } from "react"
 
 import Modal from "../components/Modal"
 import { CloudApi } from "../services/cloudApi"
+import { useAuthStore } from "../stores/authStore"
 import { useClassStore } from "../stores/classStore"
 import type { RedeemRecord, ShopItem, Student } from "../types"
 import { normalizeRedeemRecords, normalizeShopItems, normalizeStudents } from "../utils/normalize"
 
 const Store = () => {
+  const { role, canRedeem: hasRedeemPerm } = useAuthStore()
+  const isSubAccount = role === "sub"
+  const showRedeemButton = !isSubAccount || hasRedeemPerm
   const [tab, setTab] = useState<"items" | "records">("items")
   const [items, setItems] = useState<ShopItem[]>([])
   const [students, setStudents] = useState<Student[]>([])
@@ -129,21 +133,25 @@ const Store = () => {
               <p className="mt-1 text-sm text-text-secondary">{item.description}</p>
               <div className="mt-4 flex items-center justify-between text-xs text-text-tertiary">
                 <span>库存 {item.stock}</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedItem(item)
-                    setSelectedStudentId("")
-                    setNotice(null)
-                  }}
-                  disabled={loading || item.stock <= 0}
-                  className={`rounded-lg px-3 py-1 text-xs font-semibold ${item.stock <= 0 || loading
-                    ? "bg-gray-100 text-text-tertiary cursor-not-allowed"
-                    : "btn-active"
-                    }`}
-                >
-                  {item.stock <= 0 ? "售罄" : "兑换"}
-                </button>
+                {showRedeemButton ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedItem(item)
+                      setSelectedStudentId("")
+                      setNotice(null)
+                    }}
+                    disabled={loading || item.stock <= 0}
+                    className={`rounded-lg px-3 py-1 text-xs font-semibold ${item.stock <= 0 || loading
+                      ? "bg-gray-100 text-text-tertiary cursor-not-allowed"
+                      : "btn-active"
+                      }`}
+                  >
+                    {item.stock <= 0 ? "售罄" : "兑换"}
+                  </button>
+                ) : (
+                  <span className="text-text-tertiary">仅查看</span>
+                )}
               </div>
             </div>
           ))}

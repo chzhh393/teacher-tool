@@ -13,7 +13,13 @@ const verifyToken = async (db, token) => {
   if (!session) return null
   const raw = session.data || session
   if (new Date(raw.expiredAt) < new Date()) return null
-  return { userId: raw.userId, username: raw.username }
+  return {
+    userId: raw.userId,
+    username: raw.username,
+    role: raw.role || "main",
+    nickname: raw.nickname || raw.username,
+    authorizedClassIds: raw.authorizedClassIds || [],
+  }
 }
 
 exports.main = async (event = {}) => {
@@ -27,10 +33,11 @@ exports.main = async (event = {}) => {
   }
 
   const _ = db.command
-  const result = await db.collection("TT_classes").where(_.or([
-    { userId: user.userId },
-    { "data.userId": user.userId },
-  ])).limit(1000).get()
+  // 子账号：查询授权的班级；主账号：查询自己的班级
+  const whereCondition = user.role === "sub"
+    ? { _id: _.in(user.authorizedClassIds.length > 0 ? user.authorizedClassIds : ["__none__"]) }
+    : _.or([{ userId: user.userId }, { "data.userId": user.userId }])
+  const result = await db.collection("TT_classes").where(whereCondition).limit(1000).get()
   const classes = (result.data || [])
     .map((item) => {
       const raw = item.data || item

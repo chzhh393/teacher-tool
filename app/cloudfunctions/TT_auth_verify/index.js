@@ -32,6 +32,8 @@ exports.main = async (event = {}) => {
     return { ok: false }
   }
 
+  let wechatBound = null
+
   if (session.userId) {
     const userResult = await db.collection("TT_users").doc(session.userId).get()
     const userRow = userResult.data?.[0]
@@ -39,7 +41,20 @@ exports.main = async (event = {}) => {
     if (!user || user.activated === false) {
       return { ok: false }
     }
+    if (user.wechatOpenId) {
+      wechatBound = {
+        nickname: user.wechatNickname || "",
+        avatar: user.wechatAvatar || "",
+      }
+    }
   }
 
-  return { ok: true, username: session.username }
+  return {
+    ok: true,
+    username: session.username,
+    role: session.role || "main",
+    nickname: session.nickname || session.username,
+    canRedeem: session.canRedeem || false,
+    wechatBound,
+  }
 }

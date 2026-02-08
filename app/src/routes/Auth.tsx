@@ -29,6 +29,7 @@ const Auth = () => {
   const [notice, setNotice] = useState("")
   const [loading, setLoading] = useState(false)
   const [ready, setReady] = useState(false)
+  // const [wxLoading, setWxLoading] = useState(false)  // 暂时隐藏微信登录
 
   const navigate = useNavigate()
   const { setAuth } = useAuthStore()
@@ -44,6 +45,13 @@ const Auth = () => {
       }
     }
     init()
+
+    // 显示微信回调的错误信息
+    const wxError = localStorage.getItem("tt-wx-error")
+    if (wxError) {
+      setNotice(wxError)
+      localStorage.removeItem("tt-wx-error")
+    }
   }, [])
 
   const handleLogin = async () => {
@@ -56,7 +64,7 @@ const Auth = () => {
     try {
       const result = await CloudApi.authLogin({ username: username.trim(), password })
       clearClass()
-      setAuth(result.token, result.username)
+      setAuth(result.token, result.username, result.role, result.nickname, result.canRedeem)
       if (typeof window !== "undefined") {
         localStorage.removeItem(PENDING_USERNAME_KEY)
       }
@@ -75,6 +83,19 @@ const Auth = () => {
       setLoading(false)
     }
   }
+
+  // 暂时隐藏微信登录，等微信开放平台网站应用审核通过后启用
+  // const handleWeChatLogin = async () => {
+  //   setWxLoading(true)
+  //   setNotice("")
+  //   try {
+  //     const result = await CloudApi.wechatState({ purpose: "login" })
+  //     window.location.href = result.authUrl
+  //   } catch {
+  //     setNotice("微信登录初始化失败，请重试")
+  //     setWxLoading(false)
+  //   }
+  // }
 
   const handleRegister = async () => {
     if (!username.trim() || !password.trim() || !confirmPassword.trim()) {
@@ -205,6 +226,28 @@ const Auth = () => {
             >
               {!ready ? "连接中..." : tab === "login" ? "立即登录" : "立即注册"}
             </button>
+
+            {/* 微信快捷登录 - 暂时隐藏，等微信开放平台网站应用审核通过后启用 */}
+            {/* {tab === "login" ? (
+              <div className="mt-6">
+                <div className="flex items-center gap-3">
+                  <div className="h-px flex-1 bg-gray-200" />
+                  <span className="text-xs text-text-tertiary">或</span>
+                  <div className="h-px flex-1 bg-gray-200" />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleWeChatLogin}
+                  disabled={!ready || wxLoading}
+                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white py-3 text-sm font-medium text-text-primary hover:bg-gray-50 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="#07C160">
+                    <path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 0 1 .213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 0 0 .167-.054l1.903-1.114a.864.864 0 0 1 .717-.098 10.16 10.16 0 0 0 2.837.403c.276 0 .543-.027.811-.05a6.093 6.093 0 0 1-.253-1.726c0-3.573 3.357-6.473 7.503-6.473.178 0 .352.012.527.025C16.458 4.882 12.9 2.188 8.691 2.188zm-2.87 4.408a1.09 1.09 0 1 1 0 2.181 1.09 1.09 0 0 1 0-2.181zm5.742 0a1.09 1.09 0 1 1 0 2.181 1.09 1.09 0 0 1 0-2.181zM16.752 9.2c-3.636 0-6.588 2.483-6.588 5.548 0 3.065 2.952 5.548 6.588 5.548.718 0 1.41-.107 2.063-.29a.77.77 0 0 1 .578.079l1.46.852a.263.263 0 0 0 .132.043c.13 0 .236-.107.236-.238 0-.058-.023-.115-.039-.172l-.298-1.133a.48.48 0 0 1 .172-.54C22.612 17.855 23.5 16.198 23.5 14.748c0-3.065-3.12-5.548-6.748-5.548zm-2.399 3.477a.906.906 0 1 1 0 1.813.906.906 0 0 1 0-1.813zm4.797 0a.906.906 0 1 1 0 1.813.906.906 0 0 1 0-1.813z" />
+                  </svg>
+                  {wxLoading ? "跳转中..." : "微信扫码登录"}
+                </button>
+              </div>
+            ) : null} */}
 
             <div className="mt-6 text-center text-xs text-text-secondary">
               {tab === "login" ? (

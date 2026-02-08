@@ -19,6 +19,7 @@
 | 管理后台模块               | [modules/admin/README.md](./modules/admin/README.md)          |
 | 开发环境搭建               | [guides/development/getting-started.md](./guides/development/getting-started.md) |
 | Bug 检查清单（编码后必查）  | [guides/development/bug-checklist.md](./guides/development/bug-checklist.md)     |
+| 子账号系统设计方案           | [guides/development/sub-account-design.md](./guides/development/sub-account-design.md) |
 | 部署上线流程               | [guides/deployment/deployment.md](./guides/deployment/deployment.md)  |
 | 云开发（CloudBase）集成    | [guides/integration/cloudbase-guide.md](./guides/integration/cloudbase-guide.md) |
 | 数据库结构                 | [cloudbase-schema.md](./cloudbase-schema.md)                  |

@@ -9,6 +9,7 @@ import { beasts } from "../data/beasts"
 import { getDefaultSettings } from "../data/defaults"
 import { signInAnonymously } from "../lib/cloudbaseAuth"
 import { CloudApi } from "../services/cloudApi"
+import { useAuthStore } from "../stores/authStore"
 import { useClassStore } from "../stores/classStore"
 import type { ClassSummary, ScoreRule, Student } from "../types"
 import { getEvolutionStage, stageNames } from "../utils/evolution"
@@ -37,6 +38,7 @@ const Home = () => {
   const [notice, setNotice] = useState("")
   const [evolutionQueue, setEvolutionQueue] = useState<EvolutionEvent[]>([])
   const { classId, setClass } = useClassStore()
+  const isSubAccount = useAuthStore((s) => s.role === "sub")
 
   const filteredStudents = useMemo(() => {
     const keyword = search.trim()
@@ -307,13 +309,17 @@ const Home = () => {
       <div className="flex flex-col items-center justify-center py-20 text-center">
         <div className="text-6xl mb-4">📚</div>
         <h2 className="text-xl font-bold text-text-primary mb-2">还没有班级</h2>
-        <p className="text-sm text-text-secondary mb-6">请先在「老师设置」中创建班级</p>
-        <Link
-          to="/settings"
-          className="btn-active px-6 py-2 text-sm"
-        >
-          前往创建班级
-        </Link>
+        <p className="text-sm text-text-secondary mb-6">
+          {isSubAccount ? "暂无可访问的班级，请联系主账号授权" : "请先在「老师设置」中创建班级"}
+        </p>
+        {!isSubAccount && (
+          <Link
+            to="/settings"
+            className="btn-active px-6 py-2 text-sm"
+          >
+            前往创建班级
+          </Link>
+        )}
       </div>
     )
   }
@@ -422,20 +428,22 @@ const Home = () => {
                     </p>
                   )}
                 </div>
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    setActiveStudent(student)
-                    setPickerOpen(true)
-                  }}
-                  className={`rounded-lg border px-2 py-1 text-xs font-semibold transition-colors ${isMaxLevel
-                    ? "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
-                    : "border-gray-200 text-text-secondary hover:border-primary hover:text-primary hover:bg-primary/5"
-                  }`}
-                >
-                  {isMaxLevel ? "领养新幻兽" : beast ? "更换" : "领养"}
-                </button>
+                {!isSubAccount && (
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      setActiveStudent(student)
+                      setPickerOpen(true)
+                    }}
+                    className={`rounded-lg border px-2 py-1 text-xs font-semibold transition-colors ${isMaxLevel
+                      ? "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                      : "border-gray-200 text-text-secondary hover:border-primary hover:text-primary hover:bg-primary/5"
+                    }`}
+                  >
+                    {isMaxLevel ? "领养新幻兽" : beast ? "更换" : "领养"}
+                  </button>
+                )}
               </div>
 
               <div className="mt-3">

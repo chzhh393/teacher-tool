@@ -31,16 +31,38 @@ exports.main = async (event = {}) => {
     throw new Error("账号未激活")
   }
 
+  // 子账号登录时检查主账号是否仍然有效
+  const userRole = user.role || "main"
+  if (userRole === "sub" && user.parentUserId) {
+    const parentResult = await db.collection("TT_users").doc(user.parentUserId).get()
+    const parentRow = parentResult.data?.[0]
+    const parent = parentRow?.data || parentRow
+    if (!parent || parent.activated === false) {
+      throw new Error("主账号已停用，子账号无法登录")
+    }
+  }
+
+  const nickname = user.nickname || user.username
+  const authorizedClassIds = user.authorizedClassIds || []
+  const canRedeem = user.canRedeem || false
+
+  // 更新用户最后登录时间
+  await db.collection("TT_users").doc(user._id).update({ data: { lastLoginAt: now } })
+
   const token = crypto.randomBytes(24).toString("hex")
   await db.collection("TT_sessions").add({
     data: {
       token,
       userId: user._id,
       username: user.username,
+      role: userRole,
+      nickname,
+      authorizedClassIds,
+      canRedeem,
       createdAt: now,
       expiredAt: new Date(now.getTime() + 1000 * 60 * 60 * 24 * 30),
     },
   })
 
-  return { token, username: user.username }
+  return { token, username: user.username, role: userRole, nickname, canRedeem }
 }

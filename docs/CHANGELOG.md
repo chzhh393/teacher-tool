@@ -2,6 +2,29 @@
 
 本文件记录幻兽学院项目的版本变更历史。
 
+## v1.2.0 (2026-02-09)
+
+### 新增
+- **子账号系统**：主账号可创建子账号，支持班干部代管和多老师协作两大场景
+  - 主账号在"设置 → 子账号管理"中创建/编辑/删除子账号
+  - 子账号设置用户名、密码、昵称，勾选授权班级
+  - 子账号登录后仅看到授权的班级，可加分/减分，操作留痕
+  - 子账号无权管理班级、学生名单、积分规则、幻兽领养等
+  - 导航栏子账号显示"子账号"角色标签，隐藏"老师设置"入口
+  - 积分记录显示操作人信息（operatorName）
+- **小卖部兑换权限可配置**：创建/编辑子账号时可勾选"允许兑换小卖部商品"
+  - 默认关闭（班干部场景），开启后子账号可在授权班级内为学生兑换商品
+  - 未开启时小卖部页面可浏览但商品卡片显示"仅查看"
+- **全面鉴权补齐**：原有 11 个无鉴权云函数统一补充 token 鉴权 + 角色权限控制
+- 新增云函数：`TT_subaccount_manage`（list/create/update/delete）
+- 修改云函数（24 个）：`TT_auth_login`、`TT_auth_verify`、`TT_auth_register`、`TT_auth_activate`、`TT_class_list`、`TT_class_get`、`TT_class_upsert`、`TT_class_delete`、`TT_score_batch`、`TT_score_revoke`、`TT_record_list`、`TT_record_export`、`TT_honors_list`、`TT_settings_get`、`TT_settings_save`、`TT_student_list`、`TT_student_upsert`、`TT_student_delete`、`TT_shop_list`、`TT_shop_save`、`TT_shop_redeem`、`TT_redeem_list`
+- 新增前端组件：`SubAccountManager.tsx`
+
+### 数据模型变更
+- `TT_users` 新增字段：`role`、`nickname`、`parentUserId`、`authorizedClassIds`、`canRedeem`
+- `TT_sessions` 新增字段：`role`、`nickname`、`authorizedClassIds`、`canRedeem`
+- `TT_score_records` 新增字段：`operatorId`、`operatorName`
+
 ## v1.1.2 (2026-02-08)
 
 ### 新增

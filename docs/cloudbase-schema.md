@@ -100,12 +100,58 @@
 | 获取班级设置 | `TT_settings_get` | `{ classId }` | `{ settings }` |
 | 保存班级设置 | `TT_settings_save` | `{ settings }` | `{ ok }` |
 | 注册 | `TT_auth_register` | `{ username, password }` | `{ token, username }` |
-| 登录 | `TT_auth_login` | `{ username, password }` | `{ token, username }` |
-| 登录校验 | `TT_auth_verify` | `{ token }` | `{ ok, username }` |
+| 登录 | `TT_auth_login` | `{ username, password }` | `{ token, username, role, nickname, canRedeem }` |
+| 登录校验 | `TT_auth_verify` | `{ token }` | `{ ok, username, role, nickname, canRedeem }` |
 | 退出登录 | `TT_auth_logout` | `{ token }` | `{ ok }` |
 
-## 4. 权限建议
+### 2.5 `TT_users`
+```json
+{
+  "_id": "user-1738510000000",
+  "username": "teacher01",
+  "passwordHash": "...",
+  "activated": true,
+  "role": "main",
+  "nickname": "teacher01",
+  "parentUserId": null,
+  "authorizedClassIds": [],
+  "canRedeem": false,
+  "createdAt": "2026-02-03T00:00:00.000Z",
+  "updatedAt": "2026-02-03T00:00:00.000Z"
+}
+```
+
+> 子账号示例：`role: "sub"`, `parentUserId` 指向主账号 `_id`, `authorizedClassIds` 包含授权班级 ID, `canRedeem` 控制小卖部兑换权限
+
+### 2.6 `TT_sessions`
+```json
+{
+  "_id": "session-01",
+  "token": "48位hex字符串",
+  "userId": "user-1738510000000",
+  "username": "teacher01",
+  "role": "main",
+  "nickname": "teacher01",
+  "authorizedClassIds": [],
+  "canRedeem": false,
+  "createdAt": "2026-02-03T00:00:00.000Z",
+  "expiredAt": "2026-03-05T00:00:00.000Z"
+}
+```
+
+## 4. 云函数命名（补充）
+
+| 功能 | 云函数名称 | 请求数据 | 返回数据 |
+|------|------------|----------|----------|
+| 子账号管理 | `TT_subaccount_manage` | `{ action, ... }` | `{ subAccounts \| subAccount \| ok }` |
+| 激活码管理 | `TT_activation_admin` | `{ action, ... }` | 视 action 而定 |
+| 激活 | `TT_auth_activate` | `{ username, code }` | `{ token, username }` |
+| 运维概览 | `TT_ops_overview` | `{}` | `{ stats, users }` |
+| 商品管理 | `TT_shop_save` | `{ classId, items }` | `{ ok }` |
+
+## 5. 权限建议
 
 - 前端仅调用云函数，不直接写数据库
 - 数据库规则设置为仅允许云函数写入
 - 匿名登录允许调用云函数，后续可增加班级管理码校验
+- 子账号仅有加减分权限，不能管理班级、学生、设置等（详见 [子账号设计方案](./guides/development/sub-account-design.md)）

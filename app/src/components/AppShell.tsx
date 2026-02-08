@@ -9,19 +9,21 @@ import type { ClassInfo } from "../types"
 import { applyTheme } from "../config/theme"
 import Modal from "./Modal"
 
-const navItems = [
-  { label: "班级主页", to: "/" },
-  { label: "光荣榜", to: "/honors" },
-  { label: "小卖部", to: "/store" },
-  { label: "成长记录", to: "/records" },
-  { label: "老师设置", to: "/settings" },
+const allNavItems = [
+  { label: "班级主页", to: "/", mainOnly: false },
+  { label: "光荣榜", to: "/honors", mainOnly: false },
+  { label: "小卖部", to: "/store", mainOnly: false },
+  { label: "成长记录", to: "/records", mainOnly: false },
+  { label: "老师设置", to: "/settings", mainOnly: true },
 ]
 
 const AppShell = () => {
   const [classModalOpen, setClassModalOpen] = useState(false)
   const [classes, setClasses] = useState<ClassInfo[]>([])
   const { classId, className, setClass, clearClass } = useClassStore()
-  const { username, token, clearAuth } = useAuthStore()
+  const { username, token, role, nickname, clearAuth } = useAuthStore()
+  const isSubAccount = role === "sub"
+  const navItems = allNavItems.filter((item) => !item.mainOnly || !isSubAccount)
 
   useEffect(() => {
     const load = async () => {
@@ -108,9 +110,14 @@ const AppShell = () => {
             <div className="flex items-center gap-2 rounded-xl border border-gray-100 bg-white px-2 py-1 shadow-inner">
               <div className="hidden items-center gap-2 text-sm text-text-secondary sm:flex">
                 <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
-                  {(username || "U").slice(0, 1).toUpperCase()}
+                  {(nickname || username || "U").slice(0, 1).toUpperCase()}
                 </span>
-                <span>{username || "未登录"}</span>
+                <span>{nickname || username || "未登录"}</span>
+                {isSubAccount && (
+                  <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">
+                    子账号
+                  </span>
+                )}
               </div>
               <button
                 type="button"

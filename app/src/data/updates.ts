@@ -12,6 +12,20 @@ export interface UpdateEntry {
 
 export const updates: UpdateEntry[] = [
   {
+    id: "sub-account-system",
+    date: "2026-02-09",
+    version: "v1.2.0",
+    title: "子账号管理上线",
+    summary: "可为班干部或协作老师创建子账号，分权管理班级积分。",
+    highlights: [
+      "在设置页创建子账号，设定用户名、密码和昵称",
+      "勾选授权班级，子账号登录后只能看到对应班级",
+      "子账号可加分/减分，操作记录自动标注操作人",
+      "可按需开启小卖部兑换权限，默认关闭",
+    ],
+    tags: ["功能"],
+  },
+  {
     id: "copy-class-settings",
     date: "2026-02-08",
     version: "v1.1.2",
@@ -21,6 +35,18 @@ export const updates: UpdateEntry[] = [
       "新建班级弹窗新增「初始设置」选择：默认模板或从已有班级复制",
       "复制内容包括积分规则、成长阈值和小卖部商品",
       "创建后仍可在设置页面继续个性化修改",
+    ],
+    tags: ["功能"],
+  },
+  {
+    id: "search-records-by-student",
+    date: "2026-02-08",
+    version: "v1.1.1",
+    title: "成长记录支持按学生搜索",
+    summary: "记录页新增搜索框，快速查看某位学生的所有积分变动。",
+    highlights: [
+      "输入学生姓名即可筛选，支持模糊匹配",
+      "保存设置时自动校验名称不能为空，避免误存",
     ],
     tags: ["功能"],
   },

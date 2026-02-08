@@ -158,3 +158,83 @@ export interface TTSettingsSaveRequest {
 export interface TTSettingsSaveResponse {
   ok: boolean
 }
+
+// ---- 子账号管理 ----
+
+export interface TTSubAccountListResponse {
+  subAccounts: Array<{
+    id: string
+    username: string
+    nickname: string
+    authorizedClassIds: string[]
+    canRedeem?: boolean
+    createdAt?: string
+  }>
+}
+
+export interface TTSubAccountCreateRequest {
+  username: string
+  password: string
+  nickname: string
+  authorizedClassIds: string[]
+  canRedeem?: boolean
+}
+
+export interface TTSubAccountCreateResponse {
+  subAccount: {
+    id: string
+    username: string
+    nickname: string
+    authorizedClassIds: string[]
+    canRedeem?: boolean
+  }
+}
+
+export interface TTSubAccountUpdateRequest {
+  subAccountId: string
+  nickname?: string
+  password?: string
+  authorizedClassIds?: string[]
+  canRedeem?: boolean
+}
+
+export interface TTSubAccountDeleteRequest {
+  subAccountId: string
+}
+
+// ---- 微信登录 ----
+
+export interface TTWechatStateRequest {
+  purpose: "login" | "bind"
+  token?: string
+}
+
+export interface TTWechatStateResponse {
+  authUrl: string
+  state: string
+}
+
+export interface TTWechatCallbackRequest {
+  code: string
+  state: string
+}
+
+export interface TTWechatCallbackResponse {
+  action: "login" | "need_bind" | "bind_success"
+  token?: string
+  username?: string
+  tempToken?: string
+  wechatNickname?: string
+  wechatAvatar?: string
+}
+
+export interface TTWechatBindRequest {
+  tempToken: string
+  username: string
+  password: string
+}
+
+export interface TTWechatBindResponse {
+  token: string
+  username: string
+}

@@ -50,6 +50,17 @@ export interface ShopItem {
   order: number
 }
 
+export type UserRole = "main" | "sub"
+
+export interface SubAccount {
+  id: string
+  username: string
+  nickname: string
+  authorizedClassIds: string[]
+  canRedeem?: boolean
+  createdAt?: string
+}
+
 export interface ScoreRecord {
   id: string
   classId: string
@@ -61,6 +72,8 @@ export interface ScoreRecord {
   score: number
   createdAt: string
   revoked?: boolean
+  operatorId?: string
+  operatorName?: string
 }
 
 export interface RedeemRecord {

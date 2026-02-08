@@ -110,16 +110,22 @@ exports.main = async (event = {}) => {
     })
   }
 
+  const userRole = user.role || "main"
+  const nickname = user.nickname || user.username
+
   const token = crypto.randomBytes(24).toString("hex")
   await db.collection("TT_sessions").add({
     data: {
       token,
       userId: user._id,
       username: user.username,
+      role: userRole,
+      nickname,
+      authorizedClassIds: user.authorizedClassIds || [],
       createdAt: now,
       expiredAt: new Date(now.getTime() + 1000 * 60 * 60 * 24 * 30),
     },
   })
 
-  return { token, username: user.username }
+  return { token, username: user.username, role: userRole, nickname }
 }

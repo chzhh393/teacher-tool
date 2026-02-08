@@ -15,23 +15,38 @@ const verifyToken = async (db, token) => {
   if (!session) return null
   const raw = session.data || session
   if (new Date(raw.expiredAt) < new Date()) return null
-  return { userId: raw.userId, username: raw.username }
+  return {
+    userId: raw.userId,
+    username: raw.username,
+    role: raw.role || "main",
+    nickname: raw.nickname || raw.username,
+    authorizedClassIds: raw.authorizedClassIds || [],
+  }
 }
 
-const getClassId = async (db, classId, userId) => {
+const canAccessClass = (user, classRaw) => {
+  if (user.role === "sub") {
+    return (user.authorizedClassIds || []).includes(classRaw._id)
+  }
+  return classRaw.userId === user.userId
+}
+
+const getClassId = async (db, classId, user) => {
   if (classId) {
-    // 验证该班级是否属于当前用户
     const classDoc = await db.collection("TT_classes").doc(classId).get()
     const classRow = classDoc.data?.[0]
     const raw = classRow?.data || classRow
-    if (raw?.userId && raw.userId !== userId) {
-      return null // 无权访问
-    }
+    if (!raw) return null
+    if (!canAccessClass(user, { ...raw, _id: classId })) return null
     return classId
   }
 
-  // 获取当前用户的第一个班级
-  const classResult = await db.collection("TT_classes").where({ userId }).limit(1).get()
+  if (user.role === "sub") {
+    // 子账号取授权的第一个班级
+    return user.authorizedClassIds.length > 0 ? user.authorizedClassIds[0] : null
+  }
+  // 主账号取自己的第一个班级
+  const classResult = await db.collection("TT_classes").where({ userId: user.userId }).limit(1).get()
   const first = classResult.data?.[0]
   return first ? first._id : null
 }
@@ -47,7 +62,7 @@ exports.main = async (event = {}) => {
     }
   }
 
-  const classId = await getClassId(db, event.classId, user.userId)
+  const classId = await getClassId(db, event.classId, user)
   if (!classId) {
     return {
       classSummary: null,

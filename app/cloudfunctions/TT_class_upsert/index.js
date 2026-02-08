@@ -11,7 +11,11 @@ const verifyToken = async (db, token) => {
   if (!session) return null
   const raw = session.data || session
   if (new Date(raw.expiredAt) < new Date()) return null
-  return { userId: raw.userId, username: raw.username }
+  return {
+    userId: raw.userId,
+    username: raw.username,
+    role: raw.role || "main",
+  }
 }
 
 exports.main = async (event = {}) => {
@@ -27,6 +31,9 @@ exports.main = async (event = {}) => {
   const user = await verifyToken(db, token)
   if (!user) {
     throw new Error("未登录或登录已过期")
+  }
+  if (user.role === "sub") {
+    throw new Error("子账号无权管理班级")
   }
 
   // 检查是否是更新已有班级（验证所有权）

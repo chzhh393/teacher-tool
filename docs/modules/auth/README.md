@@ -18,6 +18,14 @@
 - 激活流程：用户首次使用时输入激活码，系统记录设备信息并绑定
 - 激活码状态：未使用 / 已激活 / 已撤销
 
+### 子账号系统
+
+- 主账号可创建子账号，设置用户名/密码/昵称
+- 子账号授权可访问的班级（支持多个班级）
+- 子账号仅有加减分权限，所有操作留痕记录操作人
+- 子账号可选配"小卖部兑换权限"（`canRedeem`）
+- 详细设计方案见 [子账号设计方案](../../guides/development/sub-account-design.md)
+
 ### Token 存储
 
 - Token 保存在浏览器 `localStorage` 中
@@ -30,8 +38,9 @@
 |------|------|
 | `app/src/routes/Auth.tsx` | 登录 / 注册页面 |
 | `app/src/routes/Activate.tsx` | 激活码输入页面 |
-| `app/src/stores/authStore.ts` | 认证状态管理（Zustand） |
+| `app/src/stores/authStore.ts` | 认证状态管理（Zustand），含 role/nickname/canRedeem |
 | `app/src/services/cloudApi.ts` | API 封装（见下方接口列表） |
+| `app/src/components/SubAccountManager.tsx` | 子账号管理 UI（创建/编辑/删除） |
 
 ## 云函数 / API
 
@@ -42,6 +51,7 @@
 | `TT_auth_activate` | `authActivate` | 激活码激活 |
 | `TT_auth_verify` | `authVerify` | Token 验证 |
 | `TT_auth_logout` | `authLogout` | 用户登出 |
+| `TT_subaccount_manage` | `subAccountList/Create/Update/Delete` | 子账号管理（仅主账号） |
 
 ## 数据集合
 
@@ -50,10 +60,16 @@
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | `_id` | string | 用户 ID |
-| `username` | string | 用户名（唯一） |
-| `password` | string | 密码哈希 |
+| `username` | string | 用户名（全局唯一，含子账号） |
+| `passwordHash` | string | 密码哈希（bcrypt） |
+| `activated` | boolean | 是否已激活 |
+| `role` | string | 账号类型：`"main"` 或 `"sub"` |
+| `nickname` | string | 显示名（如"数学张老师"） |
+| `parentUserId` | string \| null | 子账号指向主账号 ID，主账号为 null |
+| `authorizedClassIds` | string[] | 子账号可访问的班级 ID 列表 |
+| `canRedeem` | boolean | 子账号是否有小卖部兑换权限，默认 false |
 | `activationCode` | string | 绑定的激活码 |
-| `createdAt` | number | 注册时间戳 |
+| `createdAt` | Date | 注册时间 |
 
 ### TT_sessions
 
@@ -61,8 +77,13 @@
 |------|------|------|
 | `_id` | string | 会话 ID |
 | `userId` | string | 用户 ID |
-| `token` | string | 会话 Token |
-| `expiresAt` | number | 过期时间戳 |
+| `username` | string | 用户名 |
+| `token` | string | 会话 Token（48 位 hex） |
+| `role` | string | 账号类型 |
+| `nickname` | string | 显示名 |
+| `authorizedClassIds` | string[] | 子账号授权班级（冗余存储，避免每次查用户表） |
+| `canRedeem` | boolean | 子账号兑换权限 |
+| `expiredAt` | Date | 过期时间（30 天） |
 
 ### TT_activation_codes
 

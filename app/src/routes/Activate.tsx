@@ -84,7 +84,7 @@ const Activate = () => {
     try {
       const result = await CloudApi.authActivate({ username, code: normalized })
       clearClass()
-      setAuth(result.token, result.username)
+      setAuth(result.token, result.username, result.role || "main", result.nickname || result.username)
       if (typeof window !== "undefined") {
         localStorage.removeItem(PENDING_USERNAME_KEY)
       }

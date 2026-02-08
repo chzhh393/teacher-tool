@@ -12,6 +12,7 @@ import type { ClassInfo, ClassSettings, ScoreRule, ShopItem, Student } from "../
 import { getEvolutionStage, stageNames } from "../utils/evolution"
 import { normalizeShopItems, normalizeStudents } from "../utils/normalize"
 import { getDefaultSettings } from "../data/defaults"
+import SubAccountManager from "../components/SubAccountManager"
 
 const getDefaultShopItems = (): ShopItem[] => [
   { id: "item-default-5", name: "铅笔", description: "一支铅笔", cost: 10, icon: "✏️", type: "physical", stock: 50, limitPerStudent: 2, order: 0 },
@@ -88,13 +89,23 @@ const Settings = () => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [excelModalOpen, setExcelModalOpen] = useState(false)
   const [contactOpen, setContactOpen] = useState(false)
+  // 暂时隐藏微信绑定，等微信开放平台网站应用审核通过后启用
+  // const [wechatBound, setWechatBound] = useState<{ nickname: string; avatar: string } | null>(null)
+  // const [wxBindLoading, setWxBindLoading] = useState(false)
   const [activeSection, setActiveSection] = useState("class")
-  const sectionRefs = useRef<Record<string, HTMLElement | null>>({ class: null, students: null, rules: null, shop: null })
+  const sectionRefs = useRef<Record<string, HTMLElement | null>>({ class: null, students: null, rules: null, shop: null, account: null })
   const [loading, setLoading] = useState(false)
   const [notice, setNotice] = useState<{ message: string; type: "success" | "error" } | null>(null)
   const navigate = useNavigate()
-  const { token, clearAuth } = useAuthStore()
+  const { token, role, clearAuth } = useAuthStore()
   const { classId, className, setClass } = useClassStore()
+
+  // 子账号无权访问设置页，重定向到首页
+  useEffect(() => {
+    if (role === "sub") {
+      navigate("/")
+    }
+  }, [role, navigate])
 
   const showNotice = (message: string, type: "success" | "error" = "success") => {
     setNotice({ message, type })
@@ -208,6 +219,16 @@ const Settings = () => {
   useEffect(() => {
     loadClassList()
   }, [loadClassList])
+
+  // 加载微信绑定状态 - 暂时隐藏，等微信开放平台网站应用审核通过后启用
+  // useEffect(() => {
+  //   if (!token) return
+  //   CloudApi.authVerify({ token }).then((result) => {
+  //     if (result.ok && result.wechatBound) {
+  //       setWechatBound(result.wechatBound)
+  //     }
+  //   }).catch(() => {})
+  // }, [token])
 
   useEffect(() => {
     refresh(classId)
@@ -609,11 +630,35 @@ const Settings = () => {
     }
   }
 
+  // 暂时隐藏微信绑定，等微信开放平台网站应用审核通过后启用
+  // const handleWeChatBind = async () => {
+  //   setWxBindLoading(true)
+  //   try {
+  //     const result = await CloudApi.wechatState({ purpose: "bind", token })
+  //     window.location.href = result.authUrl
+  //   } catch {
+  //     showNotice("微信绑定初始化失败，请重试", "error")
+  //     setWxBindLoading(false)
+  //   }
+  // }
+
+  // 检查微信绑定成功回调 - 暂时隐藏，等微信开放平台网站应用审核通过后启用
+  // useEffect(() => {
+  //   const wxBindSuccess = localStorage.getItem("tt-wx-bind-success")
+  //   if (wxBindSuccess) {
+  //     localStorage.removeItem("tt-wx-bind-success")
+  //     showNotice("微信绑定成功")
+  //   }
+  // }, [])
+
   const tabs = [
     { key: "class", label: "班级管理" },
     { key: "students", label: "学生管理" },
     { key: "rules", label: "成长与积分" },
     { key: "shop", label: "小卖部" },
+    { key: "subaccounts", label: "子账号管理" },
+    { key: "beast-admin", label: "幻兽浏览", href: "/beast-admin" },
+    // { key: "account", label: "账号" },  // 暂时隐藏，等微信开放平台网站应用审核通过后启用
   ]
 
   const scrollTo = (key: string) => {
@@ -653,7 +698,7 @@ const Settings = () => {
             <button
               key={tab.key}
               type="button"
-              onClick={() => scrollTo(tab.key)}
+              onClick={() => "href" in tab && tab.href ? window.open(`#${tab.href}`, "_blank") : scrollTo(tab.key)}
               className={`relative whitespace-nowrap px-4 py-2.5 text-sm font-semibold transition-colors ${
                 activeSection === tab.key
                   ? "text-primary"
@@ -1002,6 +1047,52 @@ const Settings = () => {
           )}
         </div>
       </section>
+
+      <section
+        ref={(el) => { sectionRefs.current.subaccounts = el }}
+        data-section="subaccounts"
+        className="card p-6 border border-gray-100 scroll-mt-36"
+      >
+        <SubAccountManager />
+      </section>
+
+      {/* 账号设置 - 暂时隐藏，等微信开放平台网站应用审核通过后启用 */}
+      {/* <section
+        ref={(el) => { sectionRefs.current.account = el }}
+        data-section="account"
+        className="card p-6 border border-gray-100 scroll-mt-36"
+      >
+        <h3 className="text-lg font-semibold text-text-primary">账号设置</h3>
+        <div className="mt-4 rounded-2xl border border-gray-100 bg-gray-50 p-4">
+          <p className="text-sm font-semibold text-text-primary">微信绑定</p>
+          <p className="mt-1 text-xs text-text-tertiary">绑定微信后，可在登录页使用微信扫码快捷登录</p>
+          {wechatBound ? (
+            <div className="mt-3 flex items-center gap-3">
+              {wechatBound.avatar ? (
+                <img src={wechatBound.avatar} alt="微信头像" className="h-10 w-10 rounded-full" />
+              ) : (
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 text-base">W</div>
+              )}
+              <div className="flex-1">
+                <p className="text-sm font-medium text-text-primary">{wechatBound.nickname || "微信用户"}</p>
+                <p className="text-xs text-success">已绑定</p>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={handleWeChatBind}
+              disabled={wxBindLoading}
+              className="mt-3 flex items-center gap-2 rounded-xl border border-green-200 bg-white px-4 py-2.5 text-sm font-medium text-green-700 hover:bg-green-50 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="#07C160">
+                <path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 0 1 .213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 0 0 .167-.054l1.903-1.114a.864.864 0 0 1 .717-.098 10.16 10.16 0 0 0 2.837.403c.276 0 .543-.027.811-.05a6.093 6.093 0 0 1-.253-1.726c0-3.573 3.357-6.473 7.503-6.473.178 0 .352.012.527.025C16.458 4.882 12.9 2.188 8.691 2.188zm-2.87 4.408a1.09 1.09 0 1 1 0 2.181 1.09 1.09 0 0 1 0-2.181zm5.742 0a1.09 1.09 0 1 1 0 2.181 1.09 1.09 0 0 1 0-2.181zM16.752 9.2c-3.636 0-6.588 2.483-6.588 5.548 0 3.065 2.952 5.548 6.588 5.548.718 0 1.41-.107 2.063-.29a.77.77 0 0 1 .578.079l1.46.852a.263.263 0 0 0 .132.043c.13 0 .236-.107.236-.238 0-.058-.023-.115-.039-.172l-.298-1.133a.48.48 0 0 1 .172-.54C22.612 17.855 23.5 16.198 23.5 14.748c0-3.065-3.12-5.548-6.748-5.548zm-2.399 3.477a.906.906 0 1 1 0 1.813.906.906 0 0 1 0-1.813zm4.797 0a.906.906 0 1 1 0 1.813.906.906 0 0 1 0-1.813z" />
+              </svg>
+              {wxBindLoading ? "跳转中..." : "绑定微信"}
+            </button>
+          )}
+        </div>
+      </section> */}
 
       <div className="flex justify-end">
         <button

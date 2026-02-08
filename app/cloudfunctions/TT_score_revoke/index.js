@@ -2,6 +2,37 @@ const tcb = require("tcb-admin-node")
 
 const DEFAULT_THRESHOLDS = [0, 5, 12, 22, 35, 50, 70, 95, 125, 160]
 
+const verifyToken = async (db, token) => {
+  if (!token) return null
+  let result = await db.collection("TT_sessions").where({ token }).limit(1).get()
+  let session = (result.data || [])[0]
+  if (!session) {
+    result = await db.collection("TT_sessions").where({ "data.token": token }).limit(1).get()
+    session = (result.data || [])[0]
+  }
+  if (!session) return null
+  const raw = session.data || session
+  if (raw.expiredAt && new Date(raw.expiredAt).getTime() < Date.now()) return null
+  return {
+    userId: raw.userId,
+    username: raw.username,
+    role: raw.role || "main",
+    nickname: raw.nickname || raw.username,
+    authorizedClassIds: raw.authorizedClassIds || [],
+  }
+}
+
+const verifyClassAccess = async (db, classId, user) => {
+  if (user.role === "sub") {
+    return (user.authorizedClassIds || []).includes(classId)
+  }
+  // 主账号验证班级所有权
+  const classDoc = await db.collection("TT_classes").doc(classId).get()
+  const classRow = classDoc.data?.[0]
+  const raw = classRow?.data || classRow
+  return raw && raw.userId === user.userId
+}
+
 const computeLevel = (totalScore, thresholds) => {
   const maxLevel = thresholds.length
   let level = 1
@@ -34,19 +65,38 @@ const getThresholds = async (db, classId) => {
 }
 
 exports.main = async (event = {}) => {
-  if (!event.recordId) {
+  const { token, recordId } = event
+  if (!recordId) {
     throw new Error("recordId 为必填")
   }
 
   const app = tcb.init({ env: tcb.SYMBOL_CURRENT_ENV })
   const db = app.database()
+
+  // 1. 验证token
+  const user = await verifyToken(db, token)
+  if (!user) {
+    throw new Error("未授权：无效的token")
+  }
+
   const now = new Date()
 
-  const recordResult = await db.collection("TT_score_records").doc(event.recordId).get()
+  const recordResult = await db.collection("TT_score_records").doc(recordId).get()
   const recordRow = recordResult.data?.[0]
   const record = recordRow?.data || recordRow
   if (!record) {
     throw new Error("未找到记录")
+  }
+
+  // 2. 验证班级访问权限
+  const hasAccess = await verifyClassAccess(db, record.classId, user)
+  if (!hasAccess) {
+    throw new Error("未授权：无权访问该班级")
+  }
+
+  // 3. 子账号只能撤回自己创建的记录
+  if (user.role === "sub" && record.operatorId !== user.userId) {
+    throw new Error("未授权：子账号只能撤回自己创建的记录")
   }
 
   if (record.revoked) {
@@ -119,6 +169,8 @@ exports.main = async (event = {}) => {
       ruleName: record.ruleName,
       type: "revoke",
       score: 0,
+      operatorId: user.userId,
+      operatorName: user.nickname || user.username,
       createdAt: now,
     },
   })

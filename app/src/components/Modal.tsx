@@ -1,4 +1,5 @@
-import type { ReactNode } from "react"
+import { type ReactNode } from "react"
+import { createPortal } from "react-dom"
 
 interface ModalProps {
   open: boolean
@@ -12,7 +13,7 @@ interface ModalProps {
 const Modal = ({ open, title, description, onClose, children, footer }: ModalProps) => {
   if (!open) return null
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-8 animate-fade-in">
       <button
         type="button"
@@ -20,8 +21,8 @@ const Modal = ({ open, title, description, onClose, children, footer }: ModalPro
         onClick={onClose}
         aria-label="关闭弹窗"
       />
-      <div className="relative z-10 w-full max-w-5xl rounded-2xl border border-white/70 bg-white/90 p-6 shadow-modal backdrop-blur card-enter">
-        <div className="flex items-start justify-between gap-4">
+      <div className="relative z-10 flex w-full max-w-5xl max-h-[calc(100vh-4rem)] flex-col rounded-2xl border border-white/70 bg-white/90 p-6 shadow-modal backdrop-blur card-enter">
+        <div className="flex items-start justify-between gap-4 shrink-0">
           <div>
             {title ? <h3 className="text-xl font-bold text-text-primary">{title}</h3> : null}
             {description ? <p className="mt-1 text-sm text-text-secondary">{description}</p> : null}
@@ -35,10 +36,11 @@ const Modal = ({ open, title, description, onClose, children, footer }: ModalPro
           </button>
         </div>
 
-        <div className="mt-6">{children}</div>
-        {footer ? <div className="mt-6 flex justify-end gap-3 border-t border-gray-100 pt-4">{footer}</div> : null}
+        <div className="mt-6 min-h-0 overflow-y-auto">{children}</div>
+        {footer ? <div className="mt-6 flex justify-end gap-3 border-t border-gray-100 pt-4 shrink-0">{footer}</div> : null}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 

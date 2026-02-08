@@ -12,12 +12,23 @@ interface OpsClassInfo {
 interface OpsUserInfo {
   userId: string
   username: string
+  role: string
+  parentUserId: string | null
   activated: boolean
   createdAt: string | null
   activatedAt: string | null
+  lastLoginAt: string | null
   classCount: number
   totalStudents: number
   classes: OpsClassInfo[]
+}
+
+interface OpsDailyStats {
+  date: string
+  newUsers: number
+  newActivated: number
+  newClasses: number
+  newStudents: number
 }
 
 interface OpsStats {
@@ -42,6 +53,7 @@ const OpsAdmin = () => {
     totalClasses: 0,
     totalStudents: 0,
   })
+  const [dailyStats, setDailyStats] = useState<OpsDailyStats[]>([])
   const [users, setUsers] = useState<OpsUserInfo[]>([])
   const [loading, setLoading] = useState(false)
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set())
@@ -52,6 +64,7 @@ const OpsAdmin = () => {
     try {
       const data = await CloudApi.opsOverview()
       setStats(data.stats)
+      setDailyStats(data.dailyStats || [])
       setUsers(data.users)
     } finally {
       setLoading(false)
@@ -120,6 +133,61 @@ const OpsAdmin = () => {
         ))}
       </section>
 
+      {/* 每日新增报表 */}
+      <section className="card">
+        <div className="border-b border-gray-100 px-6 py-4">
+          <h3 className="text-lg font-semibold text-text-primary">每日新增</h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-left text-sm">
+            <thead className="bg-gray-50 text-xs uppercase text-text-tertiary">
+              <tr>
+                <th className="px-6 py-3">日期</th>
+                <th className="px-4 py-3 text-center">新增注册</th>
+                <th className="px-4 py-3 text-center">新增激活</th>
+                <th className="px-4 py-3 text-center">新建班级</th>
+                <th className="px-4 py-3 text-center">新加学生</th>
+              </tr>
+            </thead>
+            <tbody>
+              {!dailyStats.length ? (
+                <tr>
+                  <td colSpan={5} className="py-10 text-center text-sm text-text-secondary">
+                    暂无数据
+                  </td>
+                </tr>
+              ) : (
+                dailyStats.map((day) => (
+                  <tr key={day.date} className="border-t border-gray-100 hover:bg-orange-50/30">
+                    <td className="px-6 py-3 font-medium text-text-primary">{day.date}</td>
+                    <td className="px-4 py-3 text-center">
+                      <span className="rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-semibold text-indigo-700">
+                        {day.newUsers}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-700">
+                        {day.newActivated}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
+                        {day.newClasses}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+                        {day.newStudents}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       {/* 用户列表 */}
       <section className="card">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-6 py-4">
@@ -139,6 +207,7 @@ const OpsAdmin = () => {
                 <th className="px-6 py-3">用户名</th>
                 <th className="px-4 py-3">状态</th>
                 <th className="px-4 py-3">注册时间</th>
+                <th className="px-4 py-3">最后登录</th>
                 <th className="px-4 py-3 text-center">班级数</th>
                 <th className="px-4 py-3 text-center">学生数</th>
                 <th className="px-4 py-3">操作</th>
@@ -147,13 +216,13 @@ const OpsAdmin = () => {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="py-10 text-center text-sm text-text-secondary">
+                  <td colSpan={7} className="py-10 text-center text-sm text-text-secondary">
                     加载中...
                   </td>
                 </tr>
               ) : !filteredUsers.length ? (
                 <tr>
-                  <td colSpan={6} className="py-10 text-center text-sm text-text-secondary">
+                  <td colSpan={7} className="py-10 text-center text-sm text-text-secondary">
                     暂无数据
                   </td>
                 </tr>
@@ -163,7 +232,14 @@ const OpsAdmin = () => {
                     {/* 用户行 */}
                     <tr className="border-t border-gray-100 hover:bg-orange-50/30">
                       <td className="px-6 py-3 font-medium text-text-primary">
-                        {user.username}
+                        <span className="flex items-center gap-2">
+                          {user.username}
+                          {user.role === "sub" && (
+                            <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-semibold text-purple-700">
+                              子账号
+                            </span>
+                          )}
+                        </span>
                       </td>
                       <td className="px-4 py-3">
                         {user.activated ? (
@@ -178,6 +254,9 @@ const OpsAdmin = () => {
                       </td>
                       <td className="px-4 py-3 text-text-secondary">
                         {formatDate(user.createdAt)}
+                      </td>
+                      <td className="px-4 py-3 text-text-secondary">
+                        {formatDate(user.lastLoginAt)}
                       </td>
                       <td className="px-4 py-3 text-center">
                         <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-700">

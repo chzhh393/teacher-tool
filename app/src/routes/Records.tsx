@@ -167,7 +167,10 @@ const Records = () => {
                   <p className="font-semibold text-text-primary">
                     {record.studentName} · {record.ruleName}
                   </p>
-                  <p className="text-xs text-text-tertiary">{record.createdAt}</p>
+                  <p className="text-xs text-text-tertiary">
+                    {record.createdAt}
+                    {record.operatorName && <span className="ml-2">操作人：{record.operatorName}</span>}
+                  </p>
                 </div>
                 <div className="flex items-center gap-3 text-xs">
                   {record.type === "revoke" ? (
