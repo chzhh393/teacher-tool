@@ -96,6 +96,10 @@ const Settings = () => {
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({ class: null, students: null, rules: null, shop: null, account: null })
   const [loading, setLoading] = useState(false)
   const [notice, setNotice] = useState<{ message: string; type: "success" | "error" } | null>(null)
+  const lastSavedJsonRef = useRef("")
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const saveStatusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle")
   const navigate = useNavigate()
   const { token, role, clearAuth } = useAuthStore()
   const { classId, className, setClass } = useClassStore()
@@ -189,28 +193,32 @@ const Settings = () => {
       }
       const remoteSettings = settingsResult.settings
       const fallbackSettings = getDefaultSettings()
+      let loadedSettings: ClassSettings
       if (remoteSettings) {
-        setSettings({
+        loadedSettings = {
           ...fallbackSettings,
           ...remoteSettings,
           scoreRules: remoteSettings.scoreRules || fallbackSettings.scoreRules,
           levelThresholds: remoteSettings.levelThresholds || fallbackSettings.levelThresholds,
-        })
+        }
       } else {
         // 新班级没有保存过设置，重置为默认值并自动保存到数据库
-        setSettings(fallbackSettings)
+        loadedSettings = fallbackSettings
         CloudApi.settingsSave({ classId: effectiveClassId, settings: fallbackSettings }).catch(console.error)
       }
+      setSettings(loadedSettings)
       setStudents(normalizeStudents(studentResult.students || []))
       const remoteShopItems = normalizeShopItems(shopResult.items || [])
+      let loadedShopItems: ShopItem[]
       if (remoteShopItems.length > 0) {
-        setShopItems(remoteShopItems)
+        loadedShopItems = remoteShopItems
       } else {
         // 新班级没有商品，自动初始化默认商品到数据库
-        const defaults = getDefaultShopItems()
-        setShopItems(defaults)
-        CloudApi.shopSave({ classId: effectiveClassId, items: defaults }).catch(console.error)
+        loadedShopItems = getDefaultShopItems()
+        CloudApi.shopSave({ classId: effectiveClassId, items: loadedShopItems }).catch(console.error)
       }
+      setShopItems(loadedShopItems)
+      lastSavedJsonRef.current = JSON.stringify({ settings: loadedSettings, shopItems: loadedShopItems })
     } finally {
       setLoading(false)
     }
@@ -234,43 +242,52 @@ const Settings = () => {
     refresh(classId)
   }, [classId, refresh])
 
-  const handleSaveSettings = async () => {
+  // 自动保存：debounce settings 和 shopItems 变更
+  useEffect(() => {
     const effectiveClassId = classInfo.id || classId
-    if (!effectiveClassId) {
-      showNotice("请先选择或创建一个班级", "error")
-      return
-    }
-    // 校验积分规则
-    const emptyRule = settings.scoreRules.find((r) => !r.name.trim())
-    if (emptyRule) {
-      showNotice("积分规则名称不能为空，请检查后重试", "error")
-      return
-    }
-    // 校验小卖部商品
-    const emptyShopItem = shopItems.find((item) => !item.name.trim())
-    if (emptyShopItem) {
-      showNotice("商品名称不能为空，请检查后重试", "error")
-      return
-    }
-    setLoading(true)
-    clearNotice()
-    try {
-      if (classInfo.id && classInfo.name) {
-        const result = await CloudApi.classUpsert({ classInfo })
-        setClass(result.classInfo.id, result.classInfo.name)
+    if (!effectiveClassId) return
+
+    // 快照对比：数据未变化（初始加载/切换班级）则跳过
+    const currentJson = JSON.stringify({ settings, shopItems })
+    if (currentJson === lastSavedJsonRef.current) return
+
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+
+    debounceTimerRef.current = setTimeout(async () => {
+      // 静默校验：名称为空说明用户还在输入，跳过本次保存
+      if (settings.scoreRules.some((r) => !r.name.trim())) return
+      if (shopItems.some((item) => !item.name.trim())) return
+
+      setSaveStatus("saving")
+      try {
+        await Promise.all([
+          CloudApi.settingsSave({ classId: effectiveClassId, settings }),
+          CloudApi.shopSave({ classId: effectiveClassId, items: shopItems }),
+        ])
+        lastSavedJsonRef.current = JSON.stringify({ settings, shopItems })
+        setSaveStatus("saved")
+        if (saveStatusTimerRef.current) clearTimeout(saveStatusTimerRef.current)
+        saveStatusTimerRef.current = setTimeout(() => setSaveStatus("idle"), 2000)
+      } catch (error) {
+        console.error("Auto-save failed:", error)
+        setSaveStatus("error")
+        if (saveStatusTimerRef.current) clearTimeout(saveStatusTimerRef.current)
+        saveStatusTimerRef.current = setTimeout(() => setSaveStatus("idle"), 3000)
       }
-      await Promise.all([
-        CloudApi.settingsSave({ classId: effectiveClassId, settings }),
-        CloudApi.shopSave({ classId: effectiveClassId, items: shopItems }),
-      ])
-      showNotice("设置已保存")
-    } catch (error) {
-      console.error(error)
-      showNotice("保存失败，请稍后重试", "error")
-    } finally {
-      setLoading(false)
+    }, 1500)
+
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
     }
-  }
+  }, [settings, shopItems, classInfo.id, classId])
+
+  // 组件卸载时清理所有 timer
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+      if (saveStatusTimerRef.current) clearTimeout(saveStatusTimerRef.current)
+    }
+  }, [])
 
   const handleAddStudent = async () => {
     if (!newStudentName.trim()) return
@@ -693,7 +710,7 @@ const Settings = () => {
   return (
     <div className="space-y-6">
       <div className="sticky top-[4.25rem] z-30 -mt-2">
-        <div className="rounded-2xl border border-gray-100 bg-white/95 backdrop-blur shadow-sm flex overflow-x-auto">
+        <div className="rounded-2xl border border-gray-100 bg-white/95 backdrop-blur shadow-sm flex items-center overflow-x-auto">
           {tabs.map((tab) => (
             <button
               key={tab.key}
@@ -711,6 +728,18 @@ const Settings = () => {
               )}
             </button>
           ))}
+          {saveStatus !== "idle" && (
+            <span className={`ml-auto mr-3 flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold ${
+              saveStatus === "saving" ? "bg-gray-100 text-text-tertiary" :
+              saveStatus === "saved" ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-danger"
+            }`}>
+              {saveStatus === "saving" && (
+                <><span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-gray-300 border-t-primary" />保存中...</>
+              )}
+              {saveStatus === "saved" && <>✓ 已保存</>}
+              {saveStatus === "error" && <>✕ 保存失败</>}
+            </span>
+          )}
         </div>
         </div>
 
@@ -1094,16 +1123,6 @@ const Settings = () => {
         </div>
       </section> */}
 
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={handleSaveSettings}
-          className="rounded-lg btn-active px-6 py-2 text-sm font-semibold"
-        >
-          保存设置
-        </button>
-      </div>
-      {loading ? <p className="text-xs text-text-tertiary">处理中...</p> : null}
       {notice ? (
         <div className="fixed top-4 left-1/2 z-50 -translate-x-1/2 animate-[slideDown_0.3s_ease-out]">
           <div
