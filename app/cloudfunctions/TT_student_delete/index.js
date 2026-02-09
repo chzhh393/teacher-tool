@@ -58,7 +58,20 @@ exports.main = async (event = {}) => {
     throw new Error("无权删除该学生")
   }
 
-  // 4. 删除学生
+  // 4. 归档学生记录
+  const raw = studentDoc.data && typeof studentDoc.data === "object" ? studentDoc.data : studentDoc
+  const addResult = await db.collection("TT_archive").add({
+    archiveReason: "student_deleted",
+    archivedAt: new Date(),
+    archivedBy: user.userId,
+    classId: student.classId,
+    student: { ...raw, _originalId: studentDoc._id },
+  })
+  if (!addResult.id) {
+    throw new Error("归档写入失败，删除操作已中止")
+  }
+
+  // 5. 物理删除学生
   await db.collection("TT_students").doc(event.studentId).remove()
 
   return { ok: true }

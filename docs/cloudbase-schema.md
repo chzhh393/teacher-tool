@@ -139,6 +139,25 @@
 }
 ```
 
+### 2.7 `TT_shares`
+```json
+{
+  "_id": "自动生成",
+  "token": "a1b2c3d4e5f6...(32位hex)",
+  "type": "class",
+  "classId": "class-5-1",
+  "studentId": null,
+  "className": "五年级1班",
+  "studentName": null,
+  "userId": "user-1738510000000",
+  "createdAt": "2026-02-09T10:00:00.000Z",
+  "expiresAt": "2026-03-11T10:00:00.000Z",
+  "revoked": false
+}
+```
+
+> 分享令牌集合。`type` 为 `"class"` 时分享整个班级概览，`"student"` 时分享单个学生详情。令牌默认 30 天过期，可手动撤销。
+
 ## 4. 云函数命名（补充）
 
 | 功能 | 云函数名称 | 请求数据 | 返回数据 |
@@ -148,6 +167,8 @@
 | 激活 | `TT_auth_activate` | `{ username, code }` | `{ token, username }` |
 | 运维概览 | `TT_ops_overview` | `{}` | `{ stats, users }` |
 | 商品管理 | `TT_shop_save` | `{ classId, items }` | `{ ok }` |
+| 分享管理 | `TT_share_create` | `{ action, type?, classId?, studentId?, shareToken? }` | 视 action 而定 |
+| 分享查看（公开） | `TT_share_view` | `{ shareToken }` | `{ type, className, students? \| student?, ... }` |
 
 ## 5. 权限建议
 

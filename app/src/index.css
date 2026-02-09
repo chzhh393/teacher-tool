@@ -56,6 +56,10 @@ body {
   .shadow-soft {
     box-shadow: 0 12px 32px -18px rgba(15, 23, 42, 0.35);
   }
+
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
 }
 
 /* Animations */

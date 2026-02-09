@@ -238,3 +238,80 @@ export interface TTWechatBindResponse {
   token: string
   username: string
 }
+
+// ---- 进度分享 ----
+
+export interface TTShareCreateRequest {
+  type: "class" | "student"
+  classId: string
+  studentId?: string
+}
+
+export interface TTShareCreateResponse {
+  shareToken: string
+  shareUrl: string
+  expiresAt: string
+}
+
+export interface TTShareListResponse {
+  shares: Array<{
+    token: string
+    type: "class" | "student"
+    className: string
+    studentName?: string | null
+    createdAt: string
+    expiresAt: string
+    revoked: boolean
+  }>
+}
+
+export interface TTShareViewRequest {
+  shareToken: string
+}
+
+export interface TTShareViewClassData {
+  type: "class"
+  className: string
+  systemName: string
+  students: Array<{
+    name: string
+    beastId?: string | null
+    beastName?: string | null
+    level: number
+    totalScore: number
+    earnedScore: number
+    badges: number
+    progress: number
+    collectedBeasts?: string[]
+  }>
+}
+
+export interface TTShareViewStudentData {
+  type: "student"
+  className: string
+  systemName: string
+  student: {
+    name: string
+    beastId?: string | null
+    beastName?: string | null
+    level: number
+    totalScore: number
+    earnedScore: number
+    availableScore: number
+    badges: number
+    progress: number
+    collectedBeasts?: string[]
+  }
+  recentRecords: Array<{
+    ruleName: string
+    score: number
+    type: "add" | "subtract"
+    createdAt: string
+  }>
+  levelThresholds: number[]
+}
+
+export type TTShareViewResponse =
+  | TTShareViewClassData
+  | TTShareViewStudentData
+  | { error: string }

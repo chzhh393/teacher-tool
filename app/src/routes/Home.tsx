@@ -5,6 +5,7 @@ import BeastPickerModal from "../components/BeastPickerModal"
 import EvolutionCelebration, { type EvolutionEvent } from "../components/EvolutionCelebration"
 import RevokeBar from "../components/RevokeBar"
 import ScoreModal from "../components/ScoreModal"
+import ShareModal from "../components/ShareModal"
 import { beasts } from "../data/beasts"
 import { getDefaultSettings } from "../data/defaults"
 import { signInAnonymously } from "../lib/cloudbaseAuth"
@@ -37,6 +38,7 @@ const Home = () => {
   const [feedingIds, setFeedingIds] = useState<string[]>([])
   const [notice, setNotice] = useState("")
   const [evolutionQueue, setEvolutionQueue] = useState<EvolutionEvent[]>([])
+  const [shareOpen, setShareOpen] = useState(false)
   const { classId, setClass } = useClassStore()
   const isSubAccount = useAuthStore((s) => s.role === "sub")
 
@@ -100,6 +102,8 @@ const Home = () => {
 
   useEffect(() => {
     if (classId && classId !== summary?.id) {
+      setStudentList([])
+      setSummary(null)
       refresh(classId)
     }
   }, [classId])
@@ -175,10 +179,10 @@ const Home = () => {
   const handleScore = async (rule: ScoreRule) => {
     const activeClassId = classId || summary?.id
     if (!activeClassId) return
-    const ids = batchMode
-      ? selectedIds
-      : activeStudent
-        ? [activeStudent.id]
+    const ids = activeStudent
+      ? [activeStudent.id]
+      : selectedIds.length > 0
+        ? selectedIds
         : studentList.map((student) => student.id)
     if (!ids.length) return
 
@@ -330,15 +334,22 @@ const Home = () => {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h3 className="text-lg font-bold text-text-primary">学生卡片</h3>
-            <p className="text-xs text-text-secondary mt-1">管理学生积分与详情。</p>
+            <p className="hidden text-xs text-text-secondary mt-1 md:block">管理学生积分与详情。</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              className="w-40 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 md:w-40"
               placeholder="搜索学生..."
             />
+            <button
+              type="button"
+              onClick={() => setShareOpen(true)}
+              className="btn-default rounded-lg px-3 py-1.5 text-xs font-semibold"
+            >
+              分享家长
+            </button>
             <button
               type="button"
               onClick={toggleBatch}
@@ -352,7 +363,7 @@ const Home = () => {
             <button
               type="button"
               onClick={() => openScoreModal()}
-              className="btn-active shadow-md px-3 py-1.5 text-xs"
+              className="btn-default px-3 py-1.5 text-xs font-semibold"
             >
               {batchMode ? "批量操作" : "全班操作"}
             </button>
@@ -360,8 +371,8 @@ const Home = () => {
         </div>
       </section>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {filteredStudents.map((student) => {
+      <div className="mt-6 grid grid-cols-2 gap-2 md:grid-cols-3 md:gap-4 lg:grid-cols-4 xl:grid-cols-5">
+        {filteredStudents.map((student, index) => {
           const beast = findBeast(student)
           const selected = selectedIds.includes(student.id)
           const stage = getEvolutionStage(student.level)
@@ -370,7 +381,7 @@ const Home = () => {
           const isMaxLevel = student.level >= 10
           return (
             <div
-              key={student.id}
+              key={student.id || `student-${index}`}
               onClick={() => (batchMode ? toggleSelect(student.id) : openScoreModal(student))}
               role="button"
               tabIndex={0}
@@ -380,7 +391,7 @@ const Home = () => {
                   batchMode ? toggleSelect(student.id) : openScoreModal(student)
                 }
               }}
-              className={`group relative cursor-pointer rounded-2xl border p-4 text-left shadow-sm transition duration-200 ${batchMode ? "pt-8" : ""} ${isFeeding
+              className={`group relative cursor-pointer rounded-2xl border p-2 text-left shadow-sm transition duration-200 md:p-4 ${batchMode ? "pt-8" : ""} ${isFeeding
                 ? "border-primary bg-primary/5 shadow-lg ring-2 ring-primary/50 animate-pulse"
                 : selected
                   ? "border-primary bg-primary/5 shadow-md ring-1 ring-primary"
@@ -397,14 +408,25 @@ const Home = () => {
                   {selected ? "✓" : ""}
                 </span>
               ) : null}
-              <div className="flex items-center justify-between mb-3">
+              {/* 手机端：名字 等级 幻兽名 形态 一行 */}
+              <div className="mb-1 flex items-center gap-1 text-[10px] leading-tight md:hidden">
+                <span className="shrink-0 text-xs font-bold text-text-primary">{student.name}</span>
+                <span className={`shrink-0 rounded px-1 py-0.5 font-semibold ${isMaxLevel ? "bg-amber-100 text-amber-700" : "bg-primary/10 text-primary"}`}>
+                  {isMaxLevel ? "MAX" : `Lv.${student.level}`}
+                </span>
+                <span className="truncate text-text-tertiary">
+                  {beast ? `${beast.name}·${isMaxLevel ? "收集完成" : stageName}` : "未领养"}
+                </span>
+              </div>
+              {/* 桌面端：名字+等级 */}
+              <div className="hidden items-center justify-between mb-3 md:flex">
                 <p className="text-base font-bold text-text-primary">{student.name}</p>
                 <span className={`rounded-lg px-2 py-0.5 text-xs font-semibold ${isMaxLevel ? "bg-amber-100 text-amber-700" : "bg-primary/10 text-primary"}`}>
                   {isMaxLevel ? "MAX" : `Lv.${student.level}`}
                 </span>
               </div>
 
-              <div className={`aspect-square rounded-2xl p-4 flex items-center justify-center overflow-hidden ${isMaxLevel ? "bg-gradient-to-br from-amber-50 to-orange-50 ring-2 ring-amber-300/50" : isFeeding ? "bg-gradient-to-br from-primary/10 to-primary/5" : "bg-gradient-to-br from-gray-50 to-gray-100"}`}>
+              <div className={`aspect-square max-h-28 mx-auto rounded-2xl p-2 flex items-center justify-center overflow-hidden md:max-h-none md:mx-0 md:p-4 ${isMaxLevel ? "bg-gradient-to-br from-amber-50 to-orange-50 ring-2 ring-amber-300/50" : isFeeding ? "bg-gradient-to-br from-primary/10 to-primary/5" : "bg-gradient-to-br from-gray-50 to-gray-100"}`}>
                 {beast ? (
                   <img
                     src={beast.images[stage]}
@@ -419,7 +441,7 @@ const Home = () => {
                 )}
               </div>
 
-              <div className="mt-3 flex items-center justify-between">
+              <div className="mt-3 hidden items-center justify-between md:flex">
                 <div>
                   <p className="text-sm font-medium text-text-secondary">{beast?.name || "未领养"}</p>
                   {beast && (
@@ -446,8 +468,28 @@ const Home = () => {
                 )}
               </div>
 
-              <div className="mt-3">
-                <div className="flex items-center justify-between text-xs text-text-tertiary mb-1">
+              {/* 手机端：未领养或满级时显示领养按钮 */}
+              {(isMaxLevel || !beast) && !isSubAccount && (
+                <div className="mt-2 md:hidden">
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      setActiveStudent(student)
+                      setPickerOpen(true)
+                    }}
+                    className={`w-full rounded-lg border px-2 py-1.5 text-xs font-semibold transition-colors ${isMaxLevel
+                      ? "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                      : "border-primary/30 bg-primary/5 text-primary hover:bg-primary/10"
+                    }`}
+                  >
+                    {isMaxLevel ? "领养新幻兽" : "领养"}
+                  </button>
+                </div>
+              )}
+
+              <div className="mt-2 md:mt-3">
+                <div className="hidden items-center justify-between text-xs text-text-tertiary mb-1 md:flex">
                   <span>{isMaxLevel ? "收集完成" : `进度 ${student.progress}%`}</span>
                   <span>成长值 {student.totalScore}</span>
                 </div>
@@ -481,6 +523,12 @@ const Home = () => {
         onSelect={handleAssignBeast}
       />
 
+      <ShareModal
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        students={studentList}
+      />
+
       {lastRecordId && lastMessage ? <RevokeBar message={lastMessage} onRevoke={handleRevoke} /> : null}
 
       {notice ? (
@@ -492,9 +540,9 @@ const Home = () => {
       ) : null}
 
       {batchMode ? (
-        <div className="fixed inset-x-0 bottom-0 z-40">
-          <div className="mx-auto flex w-full max-w-[1400px] items-center justify-between gap-4 border border-white/70 bg-white/85 px-4 py-3 shadow-soft backdrop-blur">
-            <div className="flex items-center gap-3 text-sm text-text-secondary">
+        <div className="fixed inset-x-0 bottom-16 z-40 md:bottom-0">
+          <div className="mx-auto flex w-full max-w-[1400px] items-center justify-between gap-4 border border-white/70 bg-white/85 px-3 py-2 shadow-soft backdrop-blur md:px-4 md:py-3">
+            <div className="flex items-center gap-3 text-xs text-text-secondary md:text-sm">
               <span>
                 已选择 <span className="font-semibold text-text-primary">{selectedIds.length}</span> 人
               </span>
@@ -517,7 +565,7 @@ const Home = () => {
               type="button"
               onClick={() => openScoreModal()}
               disabled={selectedIds.length === 0}
-              className={`rounded-full px-5 py-2 text-sm font-semibold shadow-md transition ${selectedIds.length
+              className={`rounded-full px-4 py-1.5 text-xs font-semibold shadow-md transition md:px-5 md:py-2 md:text-sm ${selectedIds.length
                 ? "bg-primary text-white hover:brightness-105"
                 : "bg-gray-100 text-text-tertiary cursor-not-allowed"
                 }`}

@@ -23,6 +23,11 @@ import type {
   TTSettingsGetResponse,
   TTSettingsSaveRequest,
   TTSettingsSaveResponse,
+  TTShareCreateRequest,
+  TTShareCreateResponse,
+  TTShareListResponse,
+  TTShareViewRequest,
+  TTShareViewResponse,
   TTShopListRequest,
   TTShopListResponse,
   TTShopRedeemRequest,
@@ -259,6 +264,31 @@ export const CloudApi = {
   wechatBind: async (data: TTWechatBindRequest) => {
     return callCloudFunction<TTWechatBindRequest, TTWechatBindResponse>(
       "TT_wechat_bind",
+      data
+    )
+  },
+  // ---- 进度分享 ----
+  shareCreate: async (data: TTShareCreateRequest) => {
+    return callCloudFunction<TTShareCreateRequest & { token: string; action: "create" }, TTShareCreateResponse>(
+      "TT_share_create",
+      { ...data, token: getToken(), action: "create" }
+    )
+  },
+  shareList: async () => {
+    return callCloudFunction<{ token: string; action: "list" }, TTShareListResponse>(
+      "TT_share_create",
+      { token: getToken(), action: "list" }
+    )
+  },
+  shareRevoke: async (data: { shareToken: string }) => {
+    return callCloudFunction<typeof data & { token: string; action: "revoke" }, { ok: boolean }>(
+      "TT_share_create",
+      { ...data, token: getToken(), action: "revoke" }
+    )
+  },
+  shareView: async (data: TTShareViewRequest) => {
+    return callCloudFunction<TTShareViewRequest, TTShareViewResponse>(
+      "TT_share_view",
       data
     )
   },

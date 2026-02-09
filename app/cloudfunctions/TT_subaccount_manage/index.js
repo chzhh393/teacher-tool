@@ -223,6 +223,18 @@ const handleDelete = async (db, user, event) => {
     throw new Error("无权删除此子账号")
   }
 
+  // 归档用户记录
+  const raw = subRow.data && typeof subRow.data === "object" ? subRow.data : subRow
+  const addResult = await db.collection("TT_archive").add({
+    archiveReason: "subaccount_deleted",
+    archivedAt: new Date(),
+    archivedBy: user.userId,
+    subAccount: { ...raw, _originalId: subAccountId },
+  })
+  if (!addResult.id) {
+    throw new Error("归档写入失败，删除操作已中止")
+  }
+
   // 删除用户记录
   await db.collection("TT_users").doc(subAccountId).remove()
 

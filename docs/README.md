@@ -17,6 +17,7 @@
 | 积分商店模块               | [modules/store/README.md](./modules/store/README.md)          |
 | 荣誉榜模块                 | [modules/honors/README.md](./modules/honors/README.md)        |
 | 管理后台模块               | [modules/admin/README.md](./modules/admin/README.md)          |
+| 进度分享模块               | [modules/share/README.md](./modules/share/README.md)          |
 | 开发环境搭建               | [guides/development/getting-started.md](./guides/development/getting-started.md) |
 | Bug 检查清单（编码后必查）  | [guides/development/bug-checklist.md](./guides/development/bug-checklist.md)     |
 | 子账号系统设计方案           | [guides/development/sub-account-design.md](./guides/development/sub-account-design.md) |
@@ -49,7 +50,8 @@ docs/
 │   ├── beast-system/README.md         #   幻兽养成
 │   ├── store/README.md                #   积分商店
 │   ├── honors/README.md              #   荣誉榜
-│   └── admin/README.md               #   管理后台
+│   ├── admin/README.md               #   管理后台
+│   └── share/README.md               #   进度分享
 ├── guides/                            # 操作指南
 │   ├── development/getting-started.md #   开发环境搭建
 │   ├── deployment/deployment.md       #   部署上线指南

@@ -57,6 +57,18 @@ exports.main = async (event = {}) => {
   // 4. 创建或更新学生
   const now = new Date()
   const studentId = student._id || student.id || generateId()
+
+  // 读取已有记录，保留原始 createdAt（避免编辑时覆盖创建时间）
+  let existingCreatedAt = null
+  try {
+    const existing = await db.collection("TT_students").doc(studentId).get()
+    const existingDoc = (existing.data || [])[0]
+    if (existingDoc) {
+      const raw = existingDoc.data || existingDoc
+      existingCreatedAt = raw.createdAt
+    }
+  } catch (_) { /* 新学生，无已有记录 */ }
+
   const data = {
     ...student,
     _id: studentId,
@@ -66,7 +78,7 @@ exports.main = async (event = {}) => {
     badges: student.badges || 0,
     progress: student.progress || 0,
     updatedAt: now,
-    createdAt: student.createdAt || now,
+    createdAt: existingCreatedAt || student.createdAt || now,
   }
 
   await db.collection("TT_students").doc(studentId).set({ data })

@@ -5,7 +5,7 @@ interface RevokeBarProps {
 
 const RevokeBar = ({ message, onRevoke }: RevokeBarProps) => {
   return (
-    <div className="fixed bottom-6 left-1/2 z-40 -translate-x-1/2 rounded-full border border-white/70 bg-white/85 px-5 py-3 text-sm shadow-soft backdrop-blur">
+    <div className="fixed bottom-20 left-1/2 z-40 -translate-x-1/2 rounded-full border border-white/70 bg-white/85 px-5 py-3 text-sm shadow-soft backdrop-blur md:bottom-6">
       <div className="flex items-center gap-4">
         <span className="text-text-secondary">{message}</span>
         <button

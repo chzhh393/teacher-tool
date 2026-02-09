@@ -54,7 +54,7 @@ const DragItem = ({ value, children }: { value: unknown; children: React.ReactNo
       value={value}
       dragListener={false}
       dragControls={controls}
-      className="flex flex-wrap items-center gap-2 rounded-2xl bg-white px-3 py-2"
+      className="flex items-center gap-2 rounded-2xl bg-white px-3 py-2"
     >
       <span
         className="cursor-grab active:cursor-grabbing text-text-tertiary select-none touch-none"
@@ -547,10 +547,10 @@ const Settings = () => {
 
       setClassInfo(result.classInfo)
       setClass(result.classInfo.id, result.classInfo.name)
-      // 新班级没有学生，只需刷新班级列表
+      // 切换到新班级时立即清空学生列表，避免 await 期间渲染旧班级学生
+      setStudents([])
       const classListResult = await CloudApi.classList()
       setClasses(classListResult.classes || [])
-      setStudents([])
       setCreateModalOpen(false)
       showNotice("班级已创建")
     } catch (error) {
@@ -856,7 +856,7 @@ const Settings = () => {
                 添加
               </button>
             </div>
-            <p className="mt-4 text-sm font-semibold text-text-primary">批量导入</p>
+            <p className="mt-4 text-sm font-semibold text-text-primary">批量添加</p>
             <textarea
               value={batchText}
               onChange={(event) => setBatchText(event.target.value)}
@@ -869,7 +869,7 @@ const Settings = () => {
                 onClick={handleBatchImport}
                 className="rounded-xl bg-primary/10 px-3 py-2 text-sm font-semibold text-primary"
               >
-                导入名单
+                批量添加
               </button>
               <button
                 type="button"
@@ -988,7 +988,7 @@ const Settings = () => {
                         type="number"
                         value={rule.score}
                         onChange={(event) => handleRuleUpdate(rule.id, { score: Number(event.target.value) })}
-                        className="w-20 rounded-xl border border-gray-200 px-2 py-1 text-sm"
+                        className="w-14 shrink-0 rounded-xl border border-gray-200 px-2 py-1 text-sm md:w-20"
                       />
                       <button
                         type="button"
@@ -1025,50 +1025,60 @@ const Settings = () => {
           {shopItems.length > 0 ? (
             <Reorder.Group axis="y" values={shopItems} onReorder={handleReorderShopItems} className="space-y-3">
               {shopItems.map((item) => (
-                <DragItem key={item.id} value={item}>
-                  <input
-                    value={item.icon}
-                    onChange={(e) => handleShopItemUpdate(item.id, { icon: e.target.value })}
-                    className="w-12 rounded-xl border border-gray-200 px-2 py-1 text-center"
-                  />
-                  <input
-                    value={item.name}
-                    onChange={(e) => handleShopItemUpdate(item.id, { name: e.target.value })}
-                    placeholder="商品名称"
-                    className="min-w-0 flex-1 rounded-xl border border-gray-200 px-2 py-1 text-sm"
-                  />
-                  <input
-                    value={item.description}
-                    onChange={(e) => handleShopItemUpdate(item.id, { description: e.target.value })}
-                    placeholder="描述"
-                    className="min-w-0 flex-1 rounded-xl border border-gray-200 px-2 py-1 text-sm"
-                  />
-                  <label className="flex items-center gap-1 text-xs text-text-secondary">
-                    价格
+                <Reorder.Item
+                  key={item.id}
+                  value={item}
+                  dragListener={false}
+                  className="rounded-2xl bg-white px-3 py-2"
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="cursor-grab touch-none text-text-tertiary">::</div>
                     <input
-                      type="number"
-                      value={item.cost}
-                      onChange={(e) => handleShopItemUpdate(item.id, { cost: Number(e.target.value) })}
-                      className="w-16 rounded-xl border border-gray-200 px-2 py-1 text-sm"
+                      value={item.icon}
+                      onChange={(e) => handleShopItemUpdate(item.id, { icon: e.target.value })}
+                      className="w-12 shrink-0 rounded-xl border border-gray-200 px-2 py-1 text-center"
                     />
-                  </label>
-                  <label className="flex items-center gap-1 text-xs text-text-secondary">
-                    库存
                     <input
-                      type="number"
-                      value={item.stock}
-                      onChange={(e) => handleShopItemUpdate(item.id, { stock: Number(e.target.value) })}
-                      className="w-16 rounded-xl border border-gray-200 px-2 py-1 text-sm"
+                      value={item.name}
+                      onChange={(e) => handleShopItemUpdate(item.id, { name: e.target.value })}
+                      placeholder="商品名称"
+                      className="min-w-0 flex-1 rounded-xl border border-gray-200 px-2 py-1 text-sm"
                     />
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => handleShopItemRemove(item.id)}
-                    className="text-xs text-danger"
-                  >
-                    删除
-                  </button>
-                </DragItem>
+                  </div>
+                  <div className="mt-2 flex items-center gap-2 pl-7">
+                    <input
+                      value={item.description}
+                      onChange={(e) => handleShopItemUpdate(item.id, { description: e.target.value })}
+                      placeholder="描述（选填）"
+                      className="min-w-0 flex-1 rounded-xl border border-gray-200 px-2 py-1 text-sm"
+                    />
+                    <label className="flex shrink-0 items-center gap-1 text-xs text-text-secondary">
+                      价格
+                      <input
+                        type="number"
+                        value={item.cost}
+                        onChange={(e) => handleShopItemUpdate(item.id, { cost: Number(e.target.value) })}
+                        className="w-10 rounded-lg border border-gray-200 px-1 py-1 text-xs text-center"
+                      />
+                    </label>
+                    <label className="flex shrink-0 items-center gap-1 text-xs text-text-secondary">
+                      库存
+                      <input
+                        type="number"
+                        value={item.stock}
+                        onChange={(e) => handleShopItemUpdate(item.id, { stock: Number(e.target.value) })}
+                        className="w-10 rounded-lg border border-gray-200 px-1 py-1 text-xs text-center"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => handleShopItemRemove(item.id)}
+                      className="shrink-0 text-xs text-danger"
+                    >
+                      删除
+                    </button>
+                  </div>
+                </Reorder.Item>
               ))}
             </Reorder.Group>
           ) : (

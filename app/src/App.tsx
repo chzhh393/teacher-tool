@@ -15,6 +15,7 @@ import Store from "./routes/Store"
 import BeastGallery from "./routes/BeastGallery"
 import Updates from "./routes/Updates"
 import WeChatBind from "./routes/WeChatBind"
+import ShareView from "./routes/ShareView"
 import { CloudApi } from "./services/cloudApi"
 import { useAuthStore } from "./stores/authStore"
 import { signInAnonymously } from "./lib/cloudbaseAuth"
@@ -129,6 +130,7 @@ const App = () => {
         <Route path="/install-guide" element={<InstallGuide />} />
         <Route path="/activate" element={<Activate />} />
         <Route path="/wechat-bind" element={<WeChatBind />} />
+        <Route path="/s/:token" element={<ShareView />} />
         <Route element={<RequireAuth />}>
           <Route element={<AppShell />}>
             <Route path="/" element={<Home />} />
