@@ -26,6 +26,7 @@ const verifyToken = async (db, token) => {
 exports.main = async (event = {}) => {
   const app = tcb.init({ env: tcb.SYMBOL_CURRENT_ENV })
   const db = app.database()
+  const _ = db.command
 
   // 1. 验证 token
   const user = await verifyToken(db, event.token)
@@ -60,14 +61,28 @@ exports.main = async (event = {}) => {
 
   // 读取已有记录，保留原始 createdAt（避免编辑时覆盖创建时间）
   let existingCreatedAt = null
+  let isNewStudent = true
   try {
     const existing = await db.collection("TT_students").doc(studentId).get()
     const existingDoc = (existing.data || [])[0]
     if (existingDoc) {
       const raw = existingDoc.data || existingDoc
       existingCreatedAt = raw.createdAt
+      isNewStudent = false
     }
-  } catch (_) { /* 新学生，无已有记录 */ }
+  } catch (e) { /* 新学生，无已有记录 */ }
+
+  // 5. 新学生时检查班级人数上限（100人）
+  if (isNewStudent) {
+    const MAX_STUDENTS_PER_CLASS = 100
+    const countResult = await db.collection("TT_students").where(
+      _.or([{ classId: student.classId }, { "data.classId": student.classId }])
+    ).count()
+    const currentCount = countResult.total || 0
+    if (currentCount >= MAX_STUDENTS_PER_CLASS) {
+      throw new Error(`该班级学生已达上限（${MAX_STUDENTS_PER_CLASS}人），无法继续添加`)
+    }
+  }
 
   const data = {
     ...student,

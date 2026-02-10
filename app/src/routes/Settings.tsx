@@ -289,11 +289,17 @@ const Settings = () => {
     }
   }, [])
 
+  const MAX_STUDENTS = 100
+
   const handleAddStudent = async () => {
     if (!newStudentName.trim()) return
     const effectiveClassId = classInfo.id || classId
     if (!effectiveClassId) {
       showNotice("请先选择班级", "error")
+      return
+    }
+    if (students.length >= MAX_STUDENTS) {
+      showNotice(`每个班级最多 ${MAX_STUDENTS} 名学生`, "error")
       return
     }
     setLoading(true)
@@ -333,6 +339,15 @@ const Settings = () => {
       showNotice("请先选择班级", "error")
       return
     }
+    const remaining = MAX_STUDENTS - students.length
+    if (remaining <= 0) {
+      showNotice(`每个班级最多 ${MAX_STUDENTS} 名学生，当前已满`, "error")
+      return
+    }
+    if (names.length > remaining) {
+      showNotice(`当前班级还能添加 ${remaining} 名学生，但你输入了 ${names.length} 名`, "error")
+      return
+    }
     setLoading(true)
     clearNotice()
     try {
@@ -365,6 +380,15 @@ const Settings = () => {
     const effectiveClassId = classInfo.id || classId
     if (!effectiveClassId) {
       showNotice("请先选择班级", "error")
+      return
+    }
+    const remaining = MAX_STUDENTS - students.length
+    if (remaining <= 0) {
+      showNotice(`每个班级最多 ${MAX_STUDENTS} 名学生，当前已满`, "error")
+      return
+    }
+    if (names.length > remaining) {
+      showNotice(`当前班级还能添加 ${remaining} 名学生，但 Excel 中有 ${names.length} 名`, "error")
       return
     }
     setLoading(true)
@@ -881,7 +905,12 @@ const Settings = () => {
             </div>
           </div>
           <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-            <p className="text-sm font-semibold text-text-primary">当前学生 ({students.length})</p>
+            <p className="text-sm font-semibold text-text-primary">
+              当前学生 ({students.length}/{MAX_STUDENTS})
+              {students.length >= MAX_STUDENTS && (
+                <span className="ml-2 text-xs font-normal text-danger">已达上限</span>
+              )}
+            </p>
             <div className="mt-3 max-h-64 space-y-2 overflow-y-auto text-sm">
               {students.length > 0 ? (
                 students.map((student) => (
