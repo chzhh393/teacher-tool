@@ -110,3 +110,15 @@ body {
   transform: translateY(20px);
   animation: slideUp 0.5s ease forwards;
 }
+
+/* 触屏设备禁用布局位移的 hover 效果，防止 click 事件丢失 */
+@media (pointer: coarse) {
+  .hover\:-translate-y-1:hover,
+  .card:hover {
+    --tw-translate-y: 0 !important;
+  }
+  .group:hover .group-hover\:scale-110 {
+    --tw-scale-x: 1 !important;
+    --tw-scale-y: 1 !important;
+  }
+}

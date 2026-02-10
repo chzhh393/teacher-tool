@@ -2,6 +2,24 @@
 
 本文件记录幻兽学院项目的版本变更历史。
 
+## v1.5.1 (2026-02-10)
+
+### 修复
+- **修复触屏设备点击学生卡片无反应**：360浏览器+智慧黑板等触屏设备上，hover 效果（`hover:-translate-y-1`）导致卡片位移，浏览器取消 click 事件。三层防护：Tailwind `hoverOnlyWhenSupported`、CSS `@media (pointer: coarse)` 兜底、`touch-action: manipulation`
+
+## v1.5.0 (2026-02-10)
+
+### 新增
+- **小组积分PK**：老师可将学生分组进行积分PK竞赛，小组积分 = 成员累计积分之和
+  - 设置页新增「分组管理」Tab：创建小组、设置颜色标识、勾选成员、整体保存
+  - 光荣榜新增「小组PK」Tab：按小组总积分降序排名，展示人数、人均分，可展开查看成员明细
+  - 无小组时保持原样，有小组时自动显示 Tab 切换（向后兼容）
+- 新增云函数：`TT_group_manage`（list/save 两个 action）
+- 新增数据库集合：`TT_groups`
+- 新增前端组件：`GroupManager.tsx`（分组管理）
+- `TT_class_delete` 新增小组归档和级联删除
+- `TT_student_delete` 删除学生时自动从所属小组移除
+
 ## v1.4.2 (2026-02-10)
 
 ### 修复

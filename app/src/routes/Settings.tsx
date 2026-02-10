@@ -89,6 +89,7 @@ const Settings = () => {
   const [renameName, setRenameName] = useState("")
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [excelModalOpen, setExcelModalOpen] = useState(false)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [contactOpen, setContactOpen] = useState(false)
   // 暂时隐藏微信绑定，等微信开放平台网站应用审核通过后启用
   // const [wechatBound, setWechatBound] = useState<{ nickname: string; avatar: string } | null>(null)
@@ -318,7 +319,7 @@ const Settings = () => {
       showNotice("已添加学生")
     } catch (error) {
       console.error(error)
-      showNotice("添加失败，请稍后重试", "error")
+      showNotice(getErrorMessage(error, "添加失败"), "error")
     } finally {
       setLoading(false)
     }
@@ -335,19 +336,23 @@ const Settings = () => {
       showNotice("请先选择班级", "error")
       return
     }
-    const remaining = MAX_STUDENTS - students.length
-    if (remaining <= 0) {
-      showNotice(`每个班级最多 ${MAX_STUDENTS} 名学生，当前已满`, "error")
-      return
-    }
-    if (names.length > remaining) {
-      showNotice(`当前班级还能添加 ${remaining} 名学生，但你输入了 ${names.length} 名`, "error")
-      return
-    }
     setLoading(true)
     clearNotice()
     try {
-      for (const name of names) {
+      // 查最新学生数，避免重复导入越过上限
+      const freshResult = await CloudApi.studentList({ classId: effectiveClassId })
+      const currentCount = (freshResult.students || []).length
+      const remaining = MAX_STUDENTS - currentCount
+      if (remaining <= 0) {
+        setStudents(normalizeStudents(freshResult.students || []))
+        showNotice(`每个班级最多 ${MAX_STUDENTS} 名学生，当前已满`, "error")
+        return
+      }
+      const toAdd = names.slice(0, remaining)
+      if (toAdd.length < names.length) {
+        showNotice(`当前班级还能添加 ${remaining} 名学生，已截取前 ${remaining} 名`, "error")
+      }
+      for (const name of toAdd) {
         await CloudApi.studentUpsert({
           student: {
             id: `stu-${Date.now()}-${Math.random()}`,
@@ -363,10 +368,10 @@ const Settings = () => {
       }
       setBatchText("")
       await refresh(effectiveClassId)
-      showNotice(`已导入 ${names.length} 名学生`)
+      showNotice(`已导入 ${toAdd.length} 名学生`)
     } catch (error) {
       console.error(error)
-      showNotice("导入失败，请稍后重试", "error")
+      showNotice(getErrorMessage(error, "批量添加失败"), "error")
     } finally {
       setLoading(false)
     }
@@ -378,19 +383,24 @@ const Settings = () => {
       showNotice("请先选择班级", "error")
       return
     }
-    const remaining = MAX_STUDENTS - students.length
-    if (remaining <= 0) {
-      showNotice(`每个班级最多 ${MAX_STUDENTS} 名学生，当前已满`, "error")
-      return
-    }
-    if (names.length > remaining) {
-      showNotice(`当前班级还能添加 ${remaining} 名学生，但 Excel 中有 ${names.length} 名`, "error")
-      return
-    }
     setLoading(true)
     clearNotice()
     try {
-      for (const name of names) {
+      // 查最新学生数，避免重复导入越过上限
+      const freshResult = await CloudApi.studentList({ classId: effectiveClassId })
+      const currentCount = (freshResult.students || []).length
+      const remaining = MAX_STUDENTS - currentCount
+      if (remaining <= 0) {
+        setStudents(normalizeStudents(freshResult.students || []))
+        setExcelModalOpen(false)
+        showNotice(`每个班级最多 ${MAX_STUDENTS} 名学生，当前已满`, "error")
+        return
+      }
+      const toAdd = names.slice(0, remaining)
+      if (toAdd.length < names.length) {
+        showNotice(`当前班级还能添加 ${remaining} 名学生，已截取前 ${remaining} 名`, "error")
+      }
+      for (const name of toAdd) {
         await CloudApi.studentUpsert({
           student: {
             id: `stu-${Date.now()}-${Math.random()}`,
@@ -406,17 +416,22 @@ const Settings = () => {
       }
       setExcelModalOpen(false)
       await refresh(effectiveClassId)
-      showNotice(`已通过 Excel 导入 ${names.length} 名学生`)
+      showNotice(`已通过 Excel 导入 ${toAdd.length} 名学生`)
     } catch (error) {
       console.error(error)
-      showNotice("Excel 导入失败，请稍后重试", "error")
+      showNotice(getErrorMessage(error, "Excel 导入失败"), "error")
+      setExcelModalOpen(false)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleDeleteStudent = async (studentId: string, studentName: string) => {
-    if (!window.confirm(`确认删除学生「${studentName}」？`)) return
+  const handleDeleteStudent = async (studentId: string) => {
+    if (confirmDeleteId !== studentId) {
+      setConfirmDeleteId(studentId)
+      return
+    }
+    setConfirmDeleteId(null)
     setLoading(true)
     clearNotice()
     try {
@@ -425,7 +440,7 @@ const Settings = () => {
       showNotice("已删除学生")
     } catch (error) {
       console.error(error)
-      showNotice("删除失败，请稍后重试", "error")
+      showNotice(getErrorMessage(error, "删除失败"), "error")
     } finally {
       setLoading(false)
     }
@@ -908,10 +923,14 @@ const Settings = () => {
                     <span>{student.name}</span>
                     <button
                       type="button"
-                      onClick={() => handleDeleteStudent(student.id, student.name)}
-                      className="text-xs text-danger"
+                      onClick={() => handleDeleteStudent(student.id)}
+                      className={`rounded-lg px-2 py-1 text-xs ${
+                        confirmDeleteId === student.id
+                          ? "bg-red-500 text-white"
+                          : "text-danger"
+                      }`}
                     >
-                      删除
+                      {confirmDeleteId === student.id ? "确认删除?" : "删除"}
                     </button>
                   </div>
                 ))

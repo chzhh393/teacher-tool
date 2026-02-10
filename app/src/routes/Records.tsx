@@ -98,11 +98,11 @@ const Records = () => {
   if (!classId) {
     return (
       <div className="space-y-6">
-        <div className="card p-6 border border-gray-100">
-          <h2 className="text-2xl font-bold text-text-primary">成长记录</h2>
-          <p className="mt-2 text-sm text-text-secondary">记录每一次加减分操作，可导出 CSV。</p>
+        <div className="card p-4 border border-gray-100 md:p-6">
+          <h2 className="text-lg font-bold text-text-primary md:text-2xl">成长记录</h2>
+          <p className="mt-1 text-xs text-text-secondary md:mt-2 md:text-sm">记录每一次加减分操作，可导出 CSV。</p>
         </div>
-        <div className="card p-6 border border-gray-100 text-center">
+        <div className="card p-4 border border-gray-100 text-center md:p-6">
           <p className="text-sm text-text-tertiary">请先选择班级</p>
         </div>
       </div>
@@ -111,34 +111,34 @@ const Records = () => {
 
   return (
     <div className="space-y-6">
-      <div className="card p-6 border border-gray-100">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="card p-4 border border-gray-100 md:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-2xl font-bold text-text-primary">成长记录</h2>
-            <p className="mt-2 text-sm text-text-secondary">记录每一次加减分操作，可导出 CSV。</p>
+            <h2 className="text-lg font-bold text-text-primary md:text-2xl">成长记录</h2>
+            <p className="mt-1 text-xs text-text-secondary md:mt-2 md:text-sm">记录每一次加减分操作，可导出 CSV。</p>
           </div>
           <button
             type="button"
             onClick={handleExport}
             disabled={loading}
-            className="rounded-lg btn-active px-4 py-2 text-sm font-semibold disabled:opacity-50"
+            className="rounded-lg btn-active px-3 py-1.5 text-xs font-semibold disabled:opacity-50 md:px-4 md:py-2 md:text-sm"
           >
             导出 CSV
           </button>
         </div>
-        <div className="mt-4 flex gap-2">
+        <div className="mt-3 flex gap-2 md:mt-4">
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
             placeholder="搜索学生姓名..."
-            className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm"
+            className="flex-1 rounded-xl border border-gray-200 px-3 py-1.5 text-xs md:py-2 md:text-sm"
           />
           <button
             type="button"
             onClick={handleSearch}
             disabled={loading}
-            className="rounded-xl bg-primary/10 px-4 py-2 text-sm font-semibold text-primary disabled:opacity-50"
+            className="rounded-xl bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary disabled:opacity-50 md:px-4 md:py-2 md:text-sm"
           >
             搜索
           </button>
@@ -146,7 +146,7 @@ const Records = () => {
             <button
               type="button"
               onClick={handleClearSearch}
-              className="rounded-xl border border-gray-200 px-3 py-2 text-sm text-text-secondary"
+              className="rounded-xl border border-gray-200 px-3 py-1.5 text-xs text-text-secondary md:py-2 md:text-sm"
             >
               清除
             </button>
@@ -154,25 +154,25 @@ const Records = () => {
         </div>
       </div>
 
-      <div className="card p-6 border border-gray-100">
+      <div className="card p-4 border border-gray-100 md:p-6">
         {error && <p className="mb-3 text-xs text-danger">{error}</p>}
-        <div className="space-y-3">
+        <div className="space-y-2 md:space-y-3">
           {records.length ? (
             records.map((record) => (
               <div
                 key={record.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3"
+                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2 md:gap-3 md:rounded-2xl md:px-4 md:py-3"
               >
-                <div>
-                  <p className="font-semibold text-text-primary">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-text-primary md:text-base">
                     {record.studentName} · {record.ruleName}
                   </p>
-                  <p className="text-xs text-text-tertiary">
+                  <p className="text-[10px] text-text-tertiary md:text-xs">
                     {record.createdAt}
                     {record.operatorName && <span className="ml-2">操作人：{record.operatorName}</span>}
                   </p>
                 </div>
-                <div className="flex items-center gap-3 text-xs">
+                <div className="flex shrink-0 items-center gap-2 text-xs md:gap-3">
                   {record.type === "revoke" ? (
                     <span className="text-text-tertiary">撤回操作</span>
                   ) : (
@@ -203,16 +203,16 @@ const Records = () => {
         </div>
 
         {total > 0 && (
-          <div className="mt-6 flex items-center justify-between text-sm text-text-secondary">
+          <div className="mt-4 flex items-center justify-between text-xs text-text-secondary md:mt-6 md:text-sm">
             <span>
-              第 {page} / {totalPages} 页，共 {total} 条
+              第 {page}/{totalPages} 页，共 {total} 条
             </span>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
                 disabled={isFirstPage || loading}
-                className="rounded-lg border border-gray-200 px-3 py-1 text-text-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+                className="rounded-lg border border-gray-200 px-2 py-1 text-text-secondary disabled:opacity-50 disabled:cursor-not-allowed md:px-3"
               >
                 上一页
               </button>
@@ -220,7 +220,7 @@ const Records = () => {
                 type="button"
                 onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
                 disabled={isLastPage || loading}
-                className="rounded-lg border border-gray-200 px-3 py-1 text-text-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+                className="rounded-lg border border-gray-200 px-2 py-1 text-text-secondary disabled:opacity-50 disabled:cursor-not-allowed md:px-3"
               >
                 下一页
               </button>

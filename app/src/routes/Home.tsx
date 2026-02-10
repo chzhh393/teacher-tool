@@ -391,7 +391,7 @@ const Home = () => {
                   batchMode ? toggleSelect(student.id) : openScoreModal(student)
                 }
               }}
-              className={`group relative cursor-pointer rounded-2xl border p-2 text-left shadow-sm transition duration-200 md:p-4 ${batchMode ? "pt-8" : ""} ${isFeeding
+              className={`group relative cursor-pointer touch-manipulation rounded-2xl border p-2 text-left shadow-sm transition duration-200 md:p-4 ${batchMode ? "pt-8" : ""} ${isFeeding
                 ? "border-primary bg-primary/5 shadow-lg ring-2 ring-primary/50 animate-pulse"
                 : selected
                   ? "border-primary bg-primary/5 shadow-md ring-1 ring-primary"

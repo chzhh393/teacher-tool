@@ -162,6 +162,7 @@ const AppShell = () => {
                 { to: "/", label: "首页", icon: "home" },
                 { to: "/honors", label: "光荣榜", icon: "trophy" },
                 { to: "/store", label: "小卖部", icon: "store" },
+                { to: "/records", label: "记录", icon: "records" },
                 { to: "/settings", label: "设置", icon: "settings" },
               ]
           ).map((item) => (

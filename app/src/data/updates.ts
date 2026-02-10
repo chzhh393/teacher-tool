@@ -12,6 +12,20 @@ export interface UpdateEntry {
 
 export const updates: UpdateEntry[] = [
   {
+    id: "group-pk",
+    date: "2026-02-10",
+    version: "v1.5.0",
+    title: "小组积分PK",
+    summary: "把学生分成小组进行积分PK，在光荣榜查看小组排名，激发团队合作。",
+    highlights: [
+      "设置页新增「分组管理」，自由创建小组、分配成员、设置颜色标识",
+      "光荣榜新增「小组PK」Tab，按小组总积分排名，可展开查看成员明细",
+      "删除学生或班级时自动清理关联的小组数据",
+      "没有分组时光荣榜保持原样，不影响已有使用习惯",
+    ],
+    tags: ["功能"],
+  },
+  {
     id: "bugfix-v1.4.2",
     date: "2026-02-10",
     version: "v1.4.2",
