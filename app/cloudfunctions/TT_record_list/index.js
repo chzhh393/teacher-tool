@@ -91,36 +91,54 @@ exports.main = async (event = {}) => {
     return { records: [], total: 0 }
   }
 
+  const _ = db.command
   const page = Number(event.page || 1)
   const pageSize = Number(event.pageSize || 20)
   const skip = (page - 1) * pageSize
 
   const studentName = (event.studentName || "").trim()
 
-  const allRecordsResult = await db.collection("TT_score_records").where({ "data.classId": classId }).limit(1000).get()
-  const allRecords = (allRecordsResult.data || [])
-    .map((item) => {
-      const raw = item.data || item
-      return {
-        ...raw,
-        id: raw.id || item._id,
-        _id: item._id,
-        createdAt: formatDate(raw.createdAt),
-      }
-    })
-    .filter((r) => !studentName || (r.studentName || "").includes(studentName))
-    .sort((a, b) => {
-      // 按创建时间倒序
-      const timeA = a.createdAt || ""
-      const timeB = b.createdAt || ""
-      return timeB.localeCompare(timeA)
-    })
+  const condition = _.or([{ "data.classId": classId }, { classId }])
 
-  const total = allRecords.length
-  const records = allRecords.slice(skip, skip + pageSize)
+  const formatRecord = (item) => {
+    const raw = item.data || item
+    return {
+      ...raw,
+      id: raw.id || item._id,
+      _id: item._id,
+      createdAt: formatDate(raw.createdAt),
+    }
+  }
+
+  // 有姓名筛选时：需要全量加载后内存过滤
+  if (studentName) {
+    const allResult = await db.collection("TT_score_records")
+      .where(condition)
+      .orderBy("data.createdAt", "desc")
+      .limit(1000)
+      .get()
+    const filtered = (allResult.data || [])
+      .map(formatRecord)
+      .filter((r) => (r.studentName || "").includes(studentName))
+    return {
+      records: filtered.slice(skip, skip + pageSize),
+      total: filtered.length,
+    }
+  }
+
+  // 无筛选时：数据库端排序+分页，高效
+  const [countResult, dataResult] = await Promise.all([
+    db.collection("TT_score_records").where(condition).count(),
+    db.collection("TT_score_records")
+      .where(condition)
+      .orderBy("data.createdAt", "desc")
+      .skip(skip)
+      .limit(pageSize)
+      .get(),
+  ])
 
   return {
-    records,
-    total,
+    records: (dataResult.data || []).map(formatRecord),
+    total: countResult.total || 0,
   }
 }

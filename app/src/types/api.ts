@@ -71,6 +71,7 @@ export interface TTScoreBatchRequest {
 
 export interface TTScoreBatchResponse {
   updatedStudentIds: string[]
+  recordIds?: string[]
 }
 
 export interface TTScoreRevokeRequest {

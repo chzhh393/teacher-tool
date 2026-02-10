@@ -192,22 +192,35 @@ const Home = () => {
     setScoreModalOpen(false)
     setFeedingIds(ids)
     try {
-      await CloudApi.scoreBatch({
+      const batchResult = await CloudApi.scoreBatch({
         classId: activeClassId,
         studentIds: ids,
         ruleId: rule.id,
         ruleName: rule.name,
         score: rule.score,
       })
-      const recordResult = await CloudApi.recordList({
-        classId: activeClassId,
-        page: 1,
-        pageSize: 1,
-      })
-      const latest = normalizeScoreRecords(recordResult.records || [])[0]
-      if (latest) {
-        setLastRecordId(latest.id)
-        setLastMessage(`${latest.studentName} ${latest.ruleName} ${latest.score > 0 ? `+${latest.score}` : latest.score}`)
+
+      // 用本地数据构建提示，避免数据库一致性延迟导致显示错误
+      const scoredName = ids.length === 1
+        ? (activeStudent?.name || studentList.find((s) => s.id === ids[0])?.name || "")
+        : `${ids.length}名同学`
+      const scoreText = rule.score > 0 ? `+${rule.score}` : `${rule.score}`
+      setLastMessage(`${scoredName} ${rule.name} ${scoreText}`)
+
+      // 用后端返回的 recordId 做撤回；兜底查最新记录
+      const returnedId = batchResult.recordIds?.[batchResult.recordIds.length - 1]
+      if (returnedId) {
+        setLastRecordId(returnedId)
+      } else {
+        const recordResult = await CloudApi.recordList({
+          classId: activeClassId,
+          page: 1,
+          pageSize: 1,
+        })
+        const latest = normalizeScoreRecords(recordResult.records || [])[0]
+        if (latest) {
+          setLastRecordId(latest.id)
+        }
       }
 
       // 2. 刷新并获取新数据

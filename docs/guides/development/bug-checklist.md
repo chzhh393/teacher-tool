@@ -106,7 +106,31 @@ if (!addResult.id) {
 }
 ```
 
-**历史案例**：`TT_shares` 集合的唯一索引建在 `token` 字段上，但数据实际存储在 `data.token`。所有记录顶层 `token` 均为 `null`，唯一约束导致只有第一条分享能写入，后续创建的分享**返回了 token 但数据从未入库**，用户打开分享链接全部显示"链接无效"。且 `add()` 不抛异常，仅在返回值中携带错误码，极难发现。
+**历史案例**：`TT_shares` 集合的唯一索引建在 `token` 字段上，但数据实际存储在 `data.token`。所有记录顶层 `token` 均为 `null`，唯一约束导致只有第一条能写入，后续创建的分享**返回了 token 但数据从未入库**，用户打开分享链接全部显示"链接无效"。且 `add()` 不抛异常，仅在返回值中携带错误码，极难发现。
+
+---
+
+### 1.4 不要存储 `.add()` 的返回值（tcb-admin-node v1.x）
+
+**级别**：🔴 致命
+
+tcb-admin-node v1.23.x 中，将 `.add()` 的返回值赋给变量会导致文档**静默不写入**数据库。函数不报错，返回值中甚至包含看似有效的文档 ID，但数据库中实际不存在该记录。
+
+**检查项**：
+
+- [ ] `.add()` 调用直接 `await`，不要存储返回值
+- [ ] 如需获取新文档 ID，改用 `.add()` 前自行生成 ID
+
+```javascript
+// ❌ 错误：存储返回值导致文档静默不写入
+const result = await db.collection("TT_score_records").add({ data: { ... } })
+const newId = result.id  // 看似有效的 ID，但文档不存在！
+
+// ✅ 正确：直接 await，不存返回值
+await db.collection("TT_score_records").add({ data: { ... } })
+```
+
+**历史案例**：`TT_score_batch` 尝试捕获 `.add()` 返回值以获取记录 ID 用于撤回功能。函数执行成功，返回了 41 个 recordIds（格式正确的 32 位十六进制 ID），但数据库中实际 0 条新记录。同一循环中的 `.set()` 正常写入（学生积分更新成功），唯独 `.add()` 静默失败。回退为 `await .add()` 后恢复正常。
 
 ---
 
@@ -380,6 +404,39 @@ new Date()                // Date 对象
 
 ---
 
+### 9.2 日期排序不能用格式化后的字符串
+
+**级别**：🔴 致命
+
+`toLocaleString("zh-CN")` 输出的日期不补零（`"2026/2/9"` 而非 `"2026/02/09"`）。用字符串排序时，`"2/9"` > `"2/10"`（逐字符比较 `"9"` > `"1"`），导致 2月9日排在2月10日**前面**。同理，`"9:30"` 会排在 `"10:30"` 后面。
+
+**检查项**：
+
+- [ ] 排序必须用原始时间戳数值，不用格式化后的字符串
+- [ ] `formatDate()` 只用于显示，不参与排序
+
+```javascript
+// ❌ 错误：格式化后字符串排序，单位数日/月/时会乱序
+const records = data
+  .map(item => ({ ...item, createdAt: formatDate(item.createdAt) }))
+  .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+
+// ✅ 正确：先用原始时间戳排序，再格式化显示
+const records = data
+  .sort((a, b) => getTimestamp(b.createdAt) - getTimestamp(a.createdAt))
+  .map(item => ({ ...item, createdAt: formatDate(item.createdAt) }))
+
+// ✅ 更好：直接用数据库 orderBy 排序
+db.collection("TT_score_records")
+  .where(condition)
+  .orderBy("data.createdAt", "desc")
+  .skip(skip).limit(pageSize).get()
+```
+
+**历史案例**：`TT_record_list` 先将 `createdAt` 格式化为 `"2026/2/10"` 再用 `localeCompare` 排序。用户 2月10日加的分全部排在 2月9日记录后面，以为记录"消失"了（实际在列表中间）。修改为数据库端 `orderBy("data.createdAt", "desc")` 后解决。
+
+---
+
 ## 十、级联操作与归档删除
 
 ### 10.1 删除必须级联清理关联数据
@@ -513,6 +570,7 @@ CloudBase 数据库不会在 `.add()` 时自动创建集合。如果目标集合
 | 结果用 `row?.data \|\| row` 解包 | 🔴 | 不然取到 undefined |
 | 索引建在 `data.field` 路径上 | 🔴 | 不然唯一索引导致写入静默失败 |
 | `.add()` 后检查 `addResult.id` | 🔴 | add 失败不抛异常，只返回错误码 |
+| `.add()` 不要存储返回值（v1.x） | 🔴 | 存变量会导致文档静默不写入 |
 | `.get()` 前加 `.limit()` | 🔴 | 默认只返回 100 条 |
 | 加分封顶、扣分兜底 | 🔴 | 防止数值溢出 |
 | 前后端默认值一致 | 🔴 | 不然行为不一致 |
@@ -525,6 +583,7 @@ CloudBase 数据库不会在 `.add()` 时自动创建集合。如果目标集合
 | 等级判断用动态 maxLevel | 🟡 | 不要硬编码 10 |
 | 徽章数 Math.max(0, ...) | 🟡 | 防止负数 |
 | 日期多格式处理 | 🟡 | CloudBase 格式多变 |
+| 日期排序用时间戳，不用字符串 | 🔴 | toLocaleString 不补零，字符串排序会乱 |
 | 删除必须级联清理 | 🔴 | 不然产生孤儿记录污染统计 |
 | 删除前必须归档 | 🔴 | 先存后删，误删可恢复 |
 | 归档避免逐条写入 | 🟡 | 打包成单文档，防止超时 |
