@@ -2,6 +2,7 @@ import type {
   ClassInfo,
   ClassSettings,
   ClassSummary,
+  Group,
   RedeemRecord,
   ScoreRecord,
   ShopItem,
@@ -134,12 +135,39 @@ export interface TTRedeemListResponse {
   total: number
 }
 
+export interface GroupRankItem {
+  group: { id: string; name: string; color?: string; memberIds: string[] }
+  totalEarnedScore: number
+  memberCount: number
+  members: Array<{ id: string; name: string; earnedScore: number }>
+}
+
 export interface TTHonorsListResponse {
   ranks: Student[]
+  groupRanks?: GroupRankItem[]
 }
 
 export interface TTHonorsListRequest {
   classId?: string
+}
+
+// ---- 小组管理 ----
+
+export interface TTGroupListRequest {
+  classId: string
+}
+
+export interface TTGroupListResponse {
+  groups: Group[]
+}
+
+export interface TTGroupSaveRequest {
+  classId: string
+  groups: Group[]
+}
+
+export interface TTGroupSaveResponse {
+  ok: boolean
 }
 
 export interface TTSettingsGetRequest {

@@ -70,9 +70,15 @@ exports.main = async (event = {}) => {
     return { ranks: [] }
   }
 
-  const result = await db.collection("TT_students").where({ "data.classId": classId }).limit(1000).get()
+  const _ = db.command
+  const result = await db.collection("TT_students").where(
+    _.or([{ classId }, { "data.classId": classId }])
+  ).limit(1000).get()
   const students = (result.data || [])
-    .map((item) => item.data || item)
+    .map((item) => {
+      const raw = item.data || item
+      return { ...raw, id: item._id || raw.id }
+    })
 
   const ranks = students
     .sort((a, b) => {
@@ -83,5 +89,48 @@ exports.main = async (event = {}) => {
     })
     .slice(0, 10)
 
-  return { ranks }
+  // 3. 聚合小组排名
+  let groups = []
+  try {
+    const groupResult = await db.collection("TT_groups").where(
+      _.or([{ classId }, { "data.classId": classId }])
+    ).limit(1000).get()
+    groups = (groupResult.data || []).map((row) => {
+      const raw = row.data || row
+      return {
+        id: row._id || raw.id,
+        name: raw.name || "",
+        color: raw.color || "#6366F1",
+        memberIds: raw.memberIds || [],
+        order: raw.order ?? 0,
+      }
+    })
+  } catch (_e) { /* 集合可能不存在 */ }
+
+  let groupRanks = undefined
+  if (groups.length > 0) {
+    const studentMap = {}
+    for (const s of students) {
+      studentMap[s.id] = s
+    }
+
+    groupRanks = groups.map((g) => {
+      const members = (g.memberIds || [])
+        .map((id) => studentMap[id])
+        .filter(Boolean)
+      const totalEarnedScore = members.reduce((sum, m) => sum + (m.earnedScore || 0), 0)
+      return {
+        group: { id: g.id, name: g.name, color: g.color, memberIds: g.memberIds },
+        totalEarnedScore,
+        memberCount: members.length,
+        members: members.map((m) => ({
+          id: m.id,
+          name: m.name,
+          earnedScore: m.earnedScore || 0,
+        })),
+      }
+    }).sort((a, b) => b.totalEarnedScore - a.totalEarnedScore)
+  }
+
+  return { ranks, groupRanks }
 }

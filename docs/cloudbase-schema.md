@@ -17,6 +17,7 @@
 | 装饰品 | `TT_decorations` |
 | 成就 | `TT_achievements` |
 | 恐龙数据 | `TT_dinosaurs` |
+| 小组 | `TT_groups` |
 
 ## 2. 核心集合结构（简版）
 
@@ -158,6 +159,25 @@
 
 > 分享令牌集合。`type` 为 `"class"` 时分享整个班级概览，`"student"` 时分享单个学生详情。令牌默认 30 天过期，可手动撤销。
 
+### 2.8 `TT_groups`
+```json
+{
+  "_id": "group-1707800000000-abc",
+  "data": {
+    "id": "group-1707800000000-abc",
+    "classId": "class-5-1",
+    "name": "猛虎队",
+    "color": "#FF6B35",
+    "memberIds": ["stu-01", "stu-02"],
+    "order": 0,
+    "createdAt": "2026-02-10T00:00:00.000Z",
+    "updatedAt": "2026-02-10T00:00:00.000Z"
+  }
+}
+```
+
+> 小组集合。每个小组归属一个班级，`memberIds` 存放成员学生 ID。一个学生只能属于一个小组。
+
 ## 4. 云函数命名（补充）
 
 | 功能 | 云函数名称 | 请求数据 | 返回数据 |
@@ -169,6 +189,7 @@
 | 商品管理 | `TT_shop_save` | `{ classId, items }` | `{ ok }` |
 | 分享管理 | `TT_share_create` | `{ action, type?, classId?, studentId?, shareToken? }` | 视 action 而定 |
 | 分享查看（公开） | `TT_share_view` | `{ shareToken }` | `{ type, className, students? \| student?, ... }` |
+| 小组管理 | `TT_group_manage` | `{ action, classId, ... }` | 视 action 而定 |
 
 ## 5. 权限建议
 

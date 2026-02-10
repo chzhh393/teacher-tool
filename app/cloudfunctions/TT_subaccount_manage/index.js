@@ -64,18 +64,17 @@ const handleCreate = async (db, user, event) => {
   }
 
   // 1. 校验用户名全局唯一
-  const allUsers = await db.collection("TT_users").get()
-  const existing = (allUsers.data || [])
-    .map((row) => unwrap(row))
-    .find((row) => row && row.username === username)
-  if (existing) {
+  const _ = db.command
+  const existCheck = await db.collection("TT_users").where(
+    _.or([{ username }, { "data.username": username }])
+  ).limit(1).get()
+  if ((existCheck.data || []).length > 0) {
     throw new Error("用户名已存在")
   }
 
   // 2. 校验授权班级归属当前主账号
   const classIds = Array.isArray(authorizedClassIds) ? authorizedClassIds : []
   if (classIds.length > 0) {
-    const _ = db.command
     const classResult = await db.collection("TT_classes").where(
       _.or([
         { userId: user.userId, _id: _.in(classIds) },

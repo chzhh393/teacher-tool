@@ -2,6 +2,15 @@
 
 本文件记录幻兽学院项目的版本变更历史。
 
+## v1.4.2 (2026-02-10)
+
+### 修复
+- **修复光荣榜小组排名可能崩溃**：`TT_honors_list` 查询 `TT_groups` 集合未加 try-catch，集合不存在时整个函数报错。新增 try-catch 兜底，集合不存在时安全返回空小组排名
+- **修复光荣榜切换班级残留旧数据**：`Honors.tsx` 的 useEffect 在 classId 变化时未先清空 ranks 和 groupRanks，短暂显示上一班级的排名数据
+- **修复子账号创建用户名校验全表扫描**：`TT_subaccount_manage` 校验用户名唯一性时用 `.get()` 无 `.where()` 无 `.limit()` 全表扫描，用户超 100 人后可能误判重名。改为 `_.or()` 双路径精确查询
+- **修复 `TT_settings_save` session 查询缺少 `.limit(1)`**：verifyToken 中两处 `.where().get()` 缺少 `.limit(1)`，与其他云函数不一致
+- **新建 `TT_groups` 数据库集合**：小组管理功能依赖的集合未在 CloudBase 创建，导致光荣榜小组排名、删除班级级联清理、删除学生移出小组等功能查询时可能报错
+
 ## v1.4.1 (2026-02-10)
 
 ### 新增
@@ -24,6 +33,15 @@
 - 新增数据库集合：`TT_shares`
 - 新增前端组件：`ShareView.tsx`（公开分享页）、`ShareModal.tsx`（老师端分享弹窗）
 - 新增公开路由：`/s/:token`（不需要登录）
+
+### 修复
+- 修复新建班级"从已有班级复制"时，新班级短暂显示源班级学生列表的问题（`setStudents([])` 移至 `setClass()` 之后、`await` 之前，避免中间渲染旧数据）
+- **修复删除班级报错**：`TT_archive` 集合未创建导致归档写入失败，删除操作被中止
+- **修复删除班级未清理设置**：`TT_class_delete` 引用了错误的集合名 `TT_class_settings`（实际应为 `TT_settings`），导致班级设置既未归档也未删除
+- **修复删除班级后子账号脏数据**：删除班级时未清理子账号 `authorizedClassIds` 中对该班级的引用
+- **修复删除班级大数据量风险**：积分记录超过 5000 条时自动分片归档，避免单文档超出 16MB 限制
+- **修复复制班级设置无效**：`...sourceSettings` 展开将源班级的 `_id`、`classId`、嵌套 `data` 等字段带入新设置，在 `TT_settings_save` 中覆盖了正确的 `_id` 和 `classId`（变为 `undefined`），导致后续 `refresh` 读不到设置而写入默认值。改为显式提取 `systemName`、`themeColor`、`scoreRules`、`levelThresholds` 四个字段
+- **修复 `TT_settings_save` 字段覆盖**：云函数保存前先剔除 `_id`、`classId`、`data`、`createdAt`、`updatedAt`，确保这些字段由云函数自身生成，不被前端传入值覆盖
 
 ## v1.3.0 (2026-02-10)
 

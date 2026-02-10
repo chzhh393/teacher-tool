@@ -11,8 +11,9 @@ import { useClassStore } from "../stores/classStore"
 import type { ClassInfo, ClassSettings, ScoreRule, ShopItem, Student } from "../types"
 import { getEvolutionStage, stageNames } from "../utils/evolution"
 import { normalizeShopItems, normalizeStudents } from "../utils/normalize"
-import { getDefaultSettings } from "../data/defaults"
+import { getDefaultSettings, pickSettings } from "../data/defaults"
 import SubAccountManager from "../components/SubAccountManager"
+import GroupManager from "../components/GroupManager"
 
 const getDefaultShopItems = (): ShopItem[] => [
   { id: "item-default-5", name: "铅笔", description: "一支铅笔", cost: 10, icon: "✏️", type: "physical", stock: 50, limitPerStudent: 2, order: 0 },
@@ -93,7 +94,7 @@ const Settings = () => {
   // const [wechatBound, setWechatBound] = useState<{ nickname: string; avatar: string } | null>(null)
   // const [wxBindLoading, setWxBindLoading] = useState(false)
   const [activeSection, setActiveSection] = useState("class")
-  const sectionRefs = useRef<Record<string, HTMLElement | null>>({ class: null, students: null, rules: null, shop: null, account: null })
+  const sectionRefs = useRef<Record<string, HTMLElement | null>>({ class: null, students: null, groups: null, rules: null, shop: null, account: null })
   const [loading, setLoading] = useState(false)
   const [notice, setNotice] = useState<{ message: string; type: "success" | "error" } | null>(null)
   const lastSavedJsonRef = useRef("")
@@ -195,12 +196,7 @@ const Settings = () => {
       const fallbackSettings = getDefaultSettings()
       let loadedSettings: ClassSettings
       if (remoteSettings) {
-        loadedSettings = {
-          ...fallbackSettings,
-          ...remoteSettings,
-          scoreRules: remoteSettings.scoreRules || fallbackSettings.scoreRules,
-          levelThresholds: remoteSettings.levelThresholds || fallbackSettings.levelThresholds,
-        }
+        loadedSettings = pickSettings(remoteSettings, fallbackSettings)
       } else {
         // 新班级没有保存过设置，重置为默认值并自动保存到数据库
         loadedSettings = fallbackSettings
@@ -552,14 +548,7 @@ const Settings = () => {
         const fallbackSettings = getDefaultSettings()
         const sourceSettings = sourceSettingsResult.settings
         const newSettings = sourceSettings
-          ? {
-              ...fallbackSettings,
-              ...sourceSettings,
-              id: undefined,
-              classId: undefined,
-              scoreRules: sourceSettings.scoreRules || fallbackSettings.scoreRules,
-              levelThresholds: sourceSettings.levelThresholds || fallbackSettings.levelThresholds,
-            }
+          ? pickSettings(sourceSettings, fallbackSettings)
           : fallbackSettings
         const sourceShopItems = normalizeShopItems(sourceShopResult.items || [])
         const newShopItems = sourceShopItems.length > 0 ? sourceShopItems : getDefaultShopItems()
@@ -695,6 +684,7 @@ const Settings = () => {
   const tabs = [
     { key: "class", label: "班级管理" },
     { key: "students", label: "学生管理" },
+    { key: "groups", label: "分组管理" },
     { key: "rules", label: "成长与积分" },
     { key: "shop", label: "小卖部" },
     { key: "subaccounts", label: "子账号管理" },
@@ -931,6 +921,14 @@ const Settings = () => {
             </div>
           </div>
         </div>
+      </section>
+
+      <section
+        ref={(el) => { sectionRefs.current.groups = el }}
+        data-section="groups"
+        className="card p-6 border border-gray-100 scroll-mt-36"
+      >
+        <GroupManager />
       </section>
 
       <section

@@ -12,6 +12,19 @@ export interface UpdateEntry {
 
 export const updates: UpdateEntry[] = [
   {
+    id: "bugfix-v1.4.2",
+    date: "2026-02-10",
+    version: "v1.4.2",
+    title: "稳定性修复",
+    summary: "修复光荣榜小组排名、切换班级残留数据、子账号创建等多项问题，提升系统稳定性。",
+    highlights: [
+      "修复光荣榜小组排名在集合未就绪时可能报错的问题",
+      "修复切换班级时光荣榜短暂显示上一个班级排名的问题",
+      "修复创建子账号时用户名唯一性校验在用户量较多时可能失效的问题",
+    ],
+    tags: ["修复"],
+  },
+  {
     id: "share-to-parents",
     date: "2026-02-10",
     version: "v1.4.0",

@@ -97,6 +97,15 @@ export interface ClassSettings {
   scoreRules: ScoreRule[]
 }
 
+export interface Group {
+  id: string
+  classId: string
+  name: string
+  color?: string
+  memberIds: string[]
+  order?: number
+}
+
 export interface ClassInfo {
   id: string
   name: string

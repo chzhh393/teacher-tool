@@ -1,4 +1,4 @@
-import type { Student } from "../types"
+import type { Student, Group } from "../types"
 
 import type { RedeemRecord, ScoreRecord, ShopItem } from "../types"
 
@@ -30,6 +30,12 @@ export const normalizeRedeemRecords = (records: Array<RedeemRecord & { _id?: str
 
 export const normalizeShopItems = (items: Array<ShopItem & { _id?: string; data?: ShopItem }>) =>
   items.map((item) => {
+    const d = item.data || item
+    return { ...d, id: d.id || item._id || "" }
+  })
+
+export const normalizeGroups = (groups: Array<Group & { _id?: string; data?: Group }>) =>
+  groups.map((item) => {
     const d = item.data || item
     return { ...d, id: d.id || item._id || "" }
   })

@@ -2,10 +2,10 @@ const tcb = require("tcb-admin-node")
 
 const verifyToken = async (db, token) => {
   if (!token) return null
-  let result = await db.collection("TT_sessions").where({ token }).get()
+  let result = await db.collection("TT_sessions").where({ token }).limit(1).get()
   let session = (result.data || [])[0]
   if (!session) {
-    result = await db.collection("TT_sessions").where({ "data.token": token }).get()
+    result = await db.collection("TT_sessions").where({ "data.token": token }).limit(1).get()
     session = (result.data || [])[0]
   }
   if (!session) return null
@@ -48,11 +48,12 @@ exports.main = async (event = {}) => {
   }
 
   const settingsId = `settings-${classId}`
+  const { _id: _dropId, classId: _dropClassId, data: _dropData, createdAt: _dropCreatedAt, updatedAt: _dropUpdatedAt, ...cleanSettings } = settings
   await db.collection("TT_settings").doc(settingsId).set({
     data: {
       _id: settingsId,
       classId,
-      ...settings,
+      ...cleanSettings,
       updatedAt: now,
       createdAt: settings.createdAt || now,
     },

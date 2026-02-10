@@ -8,6 +8,10 @@ import type {
   TTClassListResponse,
   TTClassUpsertRequest,
   TTClassUpsertResponse,
+  TTGroupListRequest,
+  TTGroupListResponse,
+  TTGroupSaveRequest,
+  TTGroupSaveResponse,
   TTHonorsListResponse,
   TTHonorsListRequest,
   TTRecordExportResponse,
@@ -290,6 +294,19 @@ export const CloudApi = {
     return callCloudFunction<TTShareViewRequest, TTShareViewResponse>(
       "TT_share_view",
       data
+    )
+  },
+  // ---- 小组管理 ----
+  groupList: async (data: TTGroupListRequest) => {
+    return callCloudFunction<TTGroupListRequest & { token: string; action: "list" }, TTGroupListResponse>(
+      "TT_group_manage",
+      { ...data, token: getToken(), action: "list" }
+    )
+  },
+  groupSave: async (data: TTGroupSaveRequest) => {
+    return callCloudFunction<TTGroupSaveRequest & { token: string; action: "save" }, TTGroupSaveResponse>(
+      "TT_group_manage",
+      { ...data, token: getToken(), action: "save" }
     )
   },
   // ---- 子账号管理 ----

@@ -1,5 +1,17 @@
 import type { ClassSettings } from "../types"
 
+/** 从远程/源设置中只提取业务字段，过滤掉 _id、classId、data 等数据库元信息 */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const pickSettings = (
+  remote: any,
+  fallback: ClassSettings
+): ClassSettings => ({
+  systemName: (remote.systemName as string) || fallback.systemName,
+  themeColor: (remote.themeColor as string) || fallback.themeColor,
+  scoreRules: (remote.scoreRules as ClassSettings["scoreRules"]) || fallback.scoreRules,
+  levelThresholds: (remote.levelThresholds as number[]) || fallback.levelThresholds,
+})
+
 export const getDefaultSettings = (): ClassSettings => ({
   systemName: "幻兽学院",
   themeColor: "coral",

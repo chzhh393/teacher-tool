@@ -74,5 +74,23 @@ exports.main = async (event = {}) => {
   // 5. 物理删除学生
   await db.collection("TT_students").doc(event.studentId).remove()
 
+  // 6. 从小组中移除该学生
+  try {
+    const _ = db.command
+    const groupResult = await db.collection("TT_groups").where(
+      _.or([{ classId: student.classId }, { "data.classId": student.classId }])
+    ).limit(1000).get()
+    for (const groupDoc of groupResult.data || []) {
+      const raw = groupDoc.data && typeof groupDoc.data === "object" ? groupDoc.data : groupDoc
+      const memberIds = raw.memberIds || []
+      if (memberIds.includes(event.studentId)) {
+        const newMemberIds = memberIds.filter((id) => id !== event.studentId)
+        await db.collection("TT_groups").doc(groupDoc._id).update({
+          data: { memberIds: newMemberIds },
+        })
+      }
+    }
+  } catch (_e) { /* 小组清理失败不阻断主流程 */ }
+
   return { ok: true }
 }

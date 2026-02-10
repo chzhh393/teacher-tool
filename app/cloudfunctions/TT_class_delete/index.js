@@ -95,15 +95,22 @@ exports.main = async (event = {}) => {
   const redeemRecords = await readAll(db, "TT_redeem_records", cond)
   const shopItems = await readAll(db, "TT_shop_items", cond)
   const shares = await readAll(db, "TT_shares", cond)
+  const groups = await readAll(db, "TT_groups", cond)
 
   let settings = null
   try {
-    const settingsResult = await db.collection("TT_class_settings").doc(`settings-${classId}`).get()
+    const settingsResult = await db.collection("TT_settings").doc(`settings-${classId}`).get()
     const settingsDoc = (settingsResult.data || [])[0]
     if (settingsDoc) settings = unwrap(settingsDoc)
   } catch (_e) { /* 设置可能不存在 */ }
 
-  // 5. 一次性写入归档文档（单条文档，所有数据打包为数组）
+  // 5. 写入归档文档（大数据量时分片，避免超出 16MB 单文档限制）
+  const CHUNK_SIZE = 5000
+  const scoreChunks = []
+  for (let i = 0; i < scoreRecords.length; i += CHUNK_SIZE) {
+    scoreChunks.push(scoreRecords.slice(i, i + CHUNK_SIZE))
+  }
+
   const archiveDoc = {
     classId,
     className: classRaw.name || classRaw.className || "",
@@ -112,10 +119,12 @@ exports.main = async (event = {}) => {
     archivedBy: user.userId,
     class: unwrap(classDoc),
     students: students.map(unwrap),
-    scoreRecords: scoreRecords.map(unwrap),
+    scoreRecords: scoreChunks.length <= 1 ? scoreRecords.map(unwrap) : [],
+    scoreRecordChunks: scoreChunks.length > 1 ? scoreChunks.length : 0,
     redeemRecords: redeemRecords.map(unwrap),
     shopItems: shopItems.map(unwrap),
     shares: shares.map(unwrap),
+    groups: groups.map(unwrap),
     settings,
   }
 
@@ -124,18 +133,51 @@ exports.main = async (event = {}) => {
     throw new Error("归档写入失败，删除操作已中止")
   }
 
+  // 积分记录过多时分片写入子文档
+  if (scoreChunks.length > 1) {
+    for (let i = 0; i < scoreChunks.length; i++) {
+      await db.collection("TT_archive").add({
+        parentArchiveId: addResult.id,
+        classId,
+        chunkIndex: i,
+        chunkType: "scoreRecords",
+        archivedAt: now,
+        records: scoreChunks[i].map(unwrap),
+      })
+    }
+  }
+
   // 6. 物理删除所有关联数据
   const studentsDeleted = await removeAll(db, "TT_students", cond)
   const recordsDeleted = await removeAll(db, "TT_score_records", cond)
   const redeemDeleted = await removeAll(db, "TT_redeem_records", cond)
   const shopDeleted = await removeAll(db, "TT_shop_items", cond)
   const sharesDeleted = await removeAll(db, "TT_shares", cond)
+  const groupsDeleted = await removeAll(db, "TT_groups", cond)
 
   try {
-    await db.collection("TT_class_settings").doc(`settings-${classId}`).remove()
+    await db.collection("TT_settings").doc(`settings-${classId}`).remove()
   } catch (_e) { /* 设置可能不存在 */ }
 
-  // 7. 删除班级本身
+  // 7. 清理子账号中对该班级的授权引用
+  try {
+    const subAccounts = await readAll(db, "TT_users", _.or([
+      { parentUserId: user.userId },
+      { "data.parentUserId": user.userId },
+    ]))
+    for (const sub of subAccounts) {
+      const raw = sub.data && typeof sub.data === "object" ? sub.data : sub
+      const ids = raw.authorizedClassIds || []
+      if (ids.includes(classId)) {
+        const newIds = ids.filter((id) => id !== classId)
+        await db.collection("TT_users").doc(sub._id).update({
+          data: { authorizedClassIds: newIds },
+        })
+      }
+    }
+  } catch (_e) { /* 子账号清理失败不阻断主流程 */ }
+
+  // 8. 删除班级本身
   await db.collection("TT_classes").doc(classId).remove()
 
   return {
@@ -147,6 +189,7 @@ exports.main = async (event = {}) => {
       redeemRecords: redeemRecords.length,
       shopItems: shopItems.length,
       shares: shares.length,
+      groups: groups.length,
     },
     deleted: {
       students: studentsDeleted,
@@ -154,6 +197,7 @@ exports.main = async (event = {}) => {
       redeemRecords: redeemDeleted,
       shopItems: shopDeleted,
       shares: sharesDeleted,
+      groups: groupsDeleted,
     },
   }
 }

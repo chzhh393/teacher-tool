@@ -16,6 +16,7 @@
 | 幻兽养成模块               | [modules/beast-system/README.md](./modules/beast-system/README.md) |
 | 积分商店模块               | [modules/store/README.md](./modules/store/README.md)          |
 | 荣誉榜模块                 | [modules/honors/README.md](./modules/honors/README.md)        |
+| 小组PK模块                 | [modules/group-pk/README.md](./modules/group-pk/README.md)    |
 | 管理后台模块               | [modules/admin/README.md](./modules/admin/README.md)          |
 | 进度分享模块               | [modules/share/README.md](./modules/share/README.md)          |
 | 开发环境搭建               | [guides/development/getting-started.md](./guides/development/getting-started.md) |
@@ -50,6 +51,7 @@ docs/
 │   ├── beast-system/README.md         #   幻兽养成
 │   ├── store/README.md                #   积分商店
 │   ├── honors/README.md              #   荣誉榜
+│   ├── group-pk/README.md            #   小组PK
 │   ├── admin/README.md               #   管理后台
 │   └── share/README.md               #   进度分享
 ├── guides/                            # 操作指南
