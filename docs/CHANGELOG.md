@@ -2,6 +2,39 @@
 
 本文件记录幻兽学院项目的版本变更历史。
 
+## v1.5.9 (2026-02-11)
+
+### 优化
+- **云函数调用量优化 — 前端纯优化，预计降低 40%+**：
+  - `signInAnonymously` 单例模式：从每个页面重复调用改为 App 启动时单次调用 + Promise 去重，避免登录态过期时并发调用多次
+  - 请求去重层（dedup）：相同并发请求共享 Promise，`inflightRequests` Map 缓存进行中的请求，避免组件并发挂载时重复调用云函数
+  - TTL 内存缓存层：读操作按函数配置缓存（classList 5分钟、settingsGet 1分钟、studentList 15秒、honorsList/classGet/redeemList/recordSummary 30秒、shopList 1分钟），写操作自动失效关联缓存
+  - 修复 Home.tsx 双 useEffect 重复刷新 bug：移除重复的 signInAnonymously 调用，避免页面加载时刷新两次
+  - 修复 Settings.tsx refresh() 中重复的 classList 调用
+
+### 开发工具
+- **DEV 模式云函数调用计数器**：新增 `window.__cfCallCount`（按函数统计）、`window.__cfCallLog`（调用日志）、`window.__cfReset()`（重置计数），生产构建自动 tree-shake 不占体积
+
+### 技术实现
+- 缓存配置表：`CACHE_TTL` 定义 8 个读函数的 TTL（class_list 300s、settings_get 60s、student_list 15s、shop_list 60s、honors_list/class_get/redeem_list/record_summary 30s）
+- 失效映射表：`INVALIDATION_MAP` 定义写操作后需失效的缓存键（如 score_batch 后失效 student_list/honors_list/class_get/record_list/record_summary）
+- 请求去重键：`${name}::${JSON.stringify(data)}` 确保相同参数的请求共享 Promise
+
+## v1.5.8 (2026-02-11)
+
+### 优化
+- **存储流量优化 — 图片压缩 97%**：155 张幻兽图片从 PNG 1024×1024 转为 WebP 512×512，总大小 142.2M → 4.3M。所有代码引用 `.png` → `.webp`，无需 PNG fallback（WebP 浏览器支持率 > 97%）
+- **PWA 首次加载优化 83%**：幻兽图片从 Service Worker 预缓存移除（337 → 27 entries，13.4M → 2.3M），改为按需加载 + CacheFirst 30天缓存策略
+- **Vite 构建 gzip 预压缩**：新增 `vite-plugin-compression`，JS/CSS 文件生成 .gz 版本，传输体积减少 73%
+- **静态托管瘦身 96.7%**：清理 164 张旧 PNG 文件 + 180 个历史部署遗留 JS chunk + 3 个废弃文件，托管容量 208MB → 6.9MB
+
+### 运维
+- **CDN 节点缓存调优**：`sw.js` 和 `index.html` 节点缓存从 365天/7天 调整为 2分钟，确保 PWA 更新和部署即时生效
+- **垃圾文件清理**：删除 `public/beasts/test/` 测试目录、`prompts_*.md`、`.DS_Store` 等无用文件
+
+### 构建产物
+- dist 总大小：180M → 7.7M（减少 96%）
+
 ## v1.5.7 (2026-02-11)
 
 ### 新增
