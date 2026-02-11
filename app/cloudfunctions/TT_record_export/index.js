@@ -95,14 +95,20 @@ exports.main = async (event = {}) => {
     return { csvUrl: "" }
   }
 
-  const allResult = await db.collection("TT_score_records").where({ "data.classId": classId }).limit(1000).get()
+  const _ = db.command
+  const allResult = await db.collection("TT_score_records").where(
+    _.or([{ classId }, { "data.classId": classId }])
+  ).limit(1000).get()
+  const getTimestamp = (date) => {
+    if (!date) return 0
+    if (date.$date) return date.$date
+    if (date instanceof Date) return date.getTime()
+    const t = new Date(date).getTime()
+    return isNaN(t) ? 0 : t
+  }
   const records = (allResult.data || [])
     .map((item) => item.data || item)
-    .sort((a, b) => {
-      const timeA = formatDate(a.createdAt)
-      const timeB = formatDate(b.createdAt)
-      return timeB.localeCompare(timeA)
-    })
+    .sort((a, b) => getTimestamp(b.createdAt) - getTimestamp(a.createdAt))
 
   const csvContent = toCsv(records)
   const cloudPath = `exports/score-records-${classId}-${Date.now()}.csv`

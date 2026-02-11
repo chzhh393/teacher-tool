@@ -93,12 +93,12 @@ const Activate = () => {
       const message = error instanceof Error ? error.message : ""
       if (message.includes("已使用")) {
         setNotice("激活码已使用")
+      } else if (message.includes("用户不存在")) {
+        setNotice("账号不存在，请先注册")
       } else if (message.includes("不存在")) {
         setNotice("激活码无效")
       } else if (message.includes("已激活")) {
         setNotice("账号已激活，请直接登录")
-      } else if (message.includes("用户不存在")) {
-        setNotice("账号不存在，请先注册")
       } else if (message.includes("过期")) {
         setNotice("激活码已过期")
       } else {

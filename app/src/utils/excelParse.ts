@@ -1,5 +1,3 @@
-import * as XLSX from "xlsx"
-
 export interface ExcelParseResult {
   headers: string[]
   rows: string[][]
@@ -24,7 +22,9 @@ function detectNameColumn(headers: string[]): number {
   return -1
 }
 
-export function parseExcelFile(file: File): Promise<ExcelParseResult> {
+export async function parseExcelFile(file: File): Promise<ExcelParseResult> {
+  const XLSX = await import("xlsx")
+
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = (e) => {

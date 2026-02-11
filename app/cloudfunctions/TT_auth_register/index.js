@@ -21,10 +21,13 @@ exports.main = async (event = {}) => {
   const db = app.database()
   const now = new Date()
 
-  const existResult = await db.collection("TT_users").get()
-  const exist = (existResult.data || [])
-    .map((row) => unwrap(row))
-    .find((row) => row && row.username === username)
+  const _ = db.command
+  const existResult = await db
+    .collection("TT_users")
+    .where(_.or([{ username }, { "data.username": username }]))
+    .limit(10)
+    .get()
+  const exist = (existResult.data || []).map((row) => unwrap(row)).find((row) => row && row.username === username)
   if (exist) {
     throw new Error("用户名已存在")
   }

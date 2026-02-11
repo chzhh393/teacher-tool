@@ -157,9 +157,38 @@ db.collection("TT_students").where({ classId }).limit(1000).get()
 
 **历史案例**：`TT_student_list` 等 6 个云函数无 `.limit()`，新班级超过 100 名学生后列表不全。
 
+**历史案例 2**：`TT_auth_activate`、`TT_auth_login`、`TT_auth_register` 三个云函数用 `.get()` 全表扫描 `TT_users`，再在 JS 中 `.find()` 匹配用户名。用户量达到 108 人后，第 101+ 的用户全部查不到——激活显示"激活码无效"（实际是用户找不到）、登录显示"用户不存在"、注册检测不到重名导致同一手机号注册了两条记录。修复：改用 `.where()` 精确查询 + `.limit(10)`，不做全表扫描。
+
 ---
 
-### 2.2 `.where()` 不能省略
+### 2.2 不要全表扫描后在 JS 中过滤
+
+**级别**：🔴 致命
+
+即使加了 `.limit(1000)`，全表扫描 + JS `.find()` 过滤仍是反模式。应使用 `.where()` 在数据库端过滤，性能更好且不受 limit 限制。
+
+**检查项**：
+
+- [ ] 按条件查记录时，使用 `.where()` 而非 `.get()` + `.find()`
+
+```javascript
+// ❌ 错误：全表扫描后在 JS 中过滤，受 limit 限制且性能差
+const result = await db.collection("TT_users").get()
+const user = (result.data || []).find(row => row.username === username)
+
+// ✅ 正确：数据库端精确查询
+const _ = db.command
+const result = await db.collection("TT_users")
+  .where(_.or([{ username }, { "data.username": username }]))
+  .limit(10).get()
+const user = (result.data || []).map(row => unwrap(row))[0]
+```
+
+**历史案例**：见 2.1 历史案例 2。
+
+---
+
+### 2.3 `.where()` 不能省略
 
 **级别**：🟡 中等
 
@@ -293,6 +322,36 @@ await doc.update({ data: { stock: _.inc(-1) } })
 
 ---
 
+### 6.2 错误提示 `includes()` 匹配必须先长后短
+
+**级别**：🔴 致命
+
+前端用 `message.includes()` 匹配后端错误信息时，如果短字符串在前、长字符串在后，长字符串会被短字符串"吃掉"，导致用户看到错误的提示。
+
+**检查项**：
+
+- [ ] `includes()` 匹配链中，子串关系的条件必须**先匹配长串（更具体的），再匹配短串（更通用的）**
+
+```javascript
+// ❌ 错误："用户不存在" 包含 "不存在"，会先匹配到第 1 个分支，显示"激活码无效"
+if (message.includes("不存在")) {
+  setNotice("激活码无效")
+} else if (message.includes("用户不存在")) {
+  setNotice("账号不存在，请先注册")  // 永远不会执行
+}
+
+// ✅ 正确：先匹配更长、更具体的字符串
+if (message.includes("用户不存在")) {
+  setNotice("账号不存在，请先注册")
+} else if (message.includes("不存在")) {
+  setNotice("激活码无效")
+}
+```
+
+**历史案例**：`Activate.tsx` 用 `includes("不存在")` 在 `includes("用户不存在")` 之前匹配。当云函数因查不到用户抛出"用户不存在"时，前端先匹配到"不存在"，显示"激活码无效"。用户反复检查激活码以为输错了，实际是账号查询问题。
+
+---
+
 ## 七、React 列表与状态
 
 ### 7.1 列表 key 不能为空字符串
@@ -378,6 +437,72 @@ const ids = activeStudent
 ```
 
 **历史案例**：点击单个学生加分，因 `activeStudent` 判断顺序在 `batchMode` 之后，导致触发了"全班操作"逻辑，一次点击给全班 40 个学生都加了分。
+
+---
+
+## 八、移动端兼容
+
+### 8.1 不要使用 `window.confirm()` / `window.prompt()`
+
+**级别**：🔴 致命
+
+iOS Safari 对 `window.confirm()` 和 `window.prompt()` 支持不稳定：弹框可能不显示、被自动关闭、或被浏览器策略拦截。用户点击按钮后完全没反应，无任何错误提示。
+
+**检查项**：
+
+- [ ] 删除确认、危险操作确认等场景不使用 `window.confirm()`
+- [ ] 改用自定义 UI 确认（Modal 组件或两次点击确认模式）
+
+```jsx
+// ❌ 错误：iOS Safari 可能不弹窗，confirm 返回 false，函数直接 return
+const handleDelete = () => {
+  if (!window.confirm("确认删除？")) return
+  doDelete()
+}
+
+// ✅ 正确（方案一）：两次点击确认
+const [confirmId, setConfirmId] = useState<string | null>(null)
+const handleDelete = (id: string) => {
+  if (confirmId !== id) { setConfirmId(id); return }
+  setConfirmId(null)
+  doDelete(id)
+}
+// 按钮：第一次显示"删除"，第二次显示"确认删除?"
+
+// ✅ 正确（方案二）：使用 Modal 组件确认
+```
+
+**历史案例**：学生列表的"删除"按钮使用 `window.confirm()`，在 iOS Safari 手机端点击后完全无反应。`confirm()` 静默返回 `false`，函数直接 return，用户以为功能坏了。改为两次点击确认后恢复正常。
+
+---
+
+### 8.2 批量操作前必须查最新数据，不能依赖 React state
+
+**级别**：🔴 致命
+
+批量导入（Excel、批量文本）前的上限检查如果使用 React state 中的 `students.length`，在以下场景会失效：
+- 用户导入一次后 state 未刷新就再次导入
+- 多个浏览器标签页同时操作同一班级
+- 网络延迟导致 state 尚未更新
+
+**检查项**：
+
+- [ ] 批量操作前先调 API 查最新数据计数，不依赖 state
+- [ ] 超出上限时自动截取，而非全部拒绝
+- [ ] 失败时也刷新列表，让 UI 反映已添加的数据
+
+```javascript
+// ❌ 错误：state 可能是过时的，重复导入会越过上限
+const remaining = MAX_STUDENTS - students.length  // state 中的旧值
+if (names.length > remaining) { showError(); return }
+
+// ✅ 正确：每次导入前查最新数据
+const freshResult = await CloudApi.studentList({ classId })
+const remaining = MAX_STUDENTS - (freshResult.students || []).length
+const toAdd = names.slice(0, remaining)  // 自动截取，不超额
+```
+
+**历史案例**：用户在手机端用 Excel 导入 51 名学生成功后，误以为没成功又导入一次。前端 state 仍显示 0 名学生（第一次导入后未刷新），检查通过后再次导入 51 名，导致该班级学生达到 102 人，超过 100 人上限。改为导入前先查 API 最新计数后解决。
 
 ---
 
@@ -572,16 +697,20 @@ CloudBase 数据库不会在 `.add()` 时自动创建集合。如果目标集合
 | `.add()` 后检查 `addResult.id` | 🔴 | add 失败不抛异常，只返回错误码 |
 | `.add()` 不要存储返回值（v1.x） | 🔴 | 存变量会导致文档静默不写入 |
 | `.get()` 前加 `.limit()` | 🔴 | 默认只返回 100 条 |
+| 不要全表扫描+JS过滤 | 🔴 | 用 `.where()` 在数据库端过滤 |
 | 加分封顶、扣分兜底 | 🔴 | 防止数值溢出 |
 | 前后端默认值一致 | 🔴 | 不然行为不一致 |
 | 库存用 `_.inc()` 原子操作 | 🔴 | 防止并发超卖 |
 | 使用 HashRouter | 🔴 | BrowserRouter 刷新 404 |
+| `includes()` 匹配先长后短 | 🔴 | 子串关系匹配顺序错会显示错误提示 |
 | 列表 key 空值兜底 | 🟡 | 空字符串 key 导致渲染错乱 |
 | 切换数据源先清空旧状态 | 🔴 | 不然残留旧数据误操作 |
 | 操作目标不能默认"全部" | 🔴 | 不然意外影响所有记录 |
 | 满级 progress 返回 100 | 🟡 | 不然进度条异常 |
 | 等级判断用动态 maxLevel | 🟡 | 不要硬编码 10 |
 | 徽章数 Math.max(0, ...) | 🟡 | 防止负数 |
+| 不用 `window.confirm()` | 🔴 | iOS Safari 可能不弹窗，用户点了没反应 |
+| 批量操作前查最新数据 | 🔴 | 不依赖 state，防止重复导入越过上限 |
 | 日期多格式处理 | 🟡 | CloudBase 格式多变 |
 | 日期排序用时间戳，不用字符串 | 🔴 | toLocaleString 不补零，字符串排序会乱 |
 | 删除必须级联清理 | 🔴 | 不然产生孤儿记录污染统计 |

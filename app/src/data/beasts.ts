@@ -223,6 +223,20 @@ export const beasts: Beast[] = [
         },
     },
     {
+        id: 'dessert-fox',
+        name: '甜心狐',
+        englishName: 'Dessert Fox',
+        series: 'dreamy',
+        description: '幻兽学院的甜心狐伙伴',
+        images: {
+            egg: '/beasts/dessert_fox_1_egg.png',
+            baby: '/beasts/dessert_fox_2_baby.png',
+            juvenile: '/beasts/dessert_fox_3_juvenil.png',
+            adult: '/beasts/dessert_fox_4_adult.png',
+            ultimate: '/beasts/dessert_fox_5_ultimate.png',
+        },
+    },
+    {
         id: 'trex',
         name: '霸王龙',
         englishName: 'T-Rex',

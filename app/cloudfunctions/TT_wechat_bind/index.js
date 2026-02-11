@@ -33,11 +33,15 @@ exports.main = async (event = {}) => {
   }
 
   const { openId, unionId, nickname, avatar } = tempDoc
+  const _ = db.command
 
   // 2. 验证账号密码
-  const userResult = await db.collection("TT_users").limit(1000).get()
-  const allUsers = (userResult.data || []).map((r) => unwrap(r))
-  const user = allUsers.find((u) => u && u.username === username)
+  const userResult = await db
+    .collection("TT_users")
+    .where(_.or([{ username }, { "data.username": username }]))
+    .limit(10)
+    .get()
+  const user = (userResult.data || []).map((r) => unwrap(r)).find((u) => u && u.username === username)
 
   if (!user) {
     throw new Error("用户不存在")
@@ -53,7 +57,12 @@ exports.main = async (event = {}) => {
   }
 
   // 3. 检查 openid 未被其他账号绑定
-  const existingUser = allUsers.find((u) => u && u.wechatOpenId === openId && u._id !== user._id)
+  const bindCheckResult = await db
+    .collection("TT_users")
+    .where(_.or([{ wechatOpenId: openId }, { "data.wechatOpenId": openId }]))
+    .limit(10)
+    .get()
+  const existingUser = (bindCheckResult.data || []).map((r) => unwrap(r)).find((u) => u && u.wechatOpenId === openId && u._id !== user._id)
   if (existingUser) {
     throw new Error("此微信已绑定其他账号")
   }

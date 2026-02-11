@@ -9,7 +9,7 @@
 
 ---
 
-## 梦幻系 (Dreamy Series) - 15种
+## 梦幻系 (Dreamy Series) - 16种
 
 ### 1. 独角兽 (Unicorn)
 - **🥚 幻兽蛋**: `One single Unicorn egg, solo, pastel pink and purple with soft spiral patterns, sparkling, magical aura, white background`
@@ -115,6 +115,13 @@
 - **🧒 少年期**: `One single Juvenile Elk, solo, running on ice, trail of light behind, antlers starting to glow, white background`
 - **💪 成熟期**: `One single Adult Aurora Elk, solo, standing on a peak, antlers made of solid light/aurora, starry night coat, mysterious, white background`
 - **👑 完全体**: `One single Ultimate Aurora Elk (Sky Spirit), solo, walking in the sky, body is semi-transparent starlight, giant aurora curtain behind, majestic and silent, white background`
+
+### 16. 甜心狐 (Dessert Fox)
+- **🥚 幻兽蛋**: `One single Dessert Fox egg, solo, looks like a giant pastel pink macaron with golden cream filling, sugar crystal patterns on surface, sweet aroma sparkles, tiny fox silhouette visible inside, strawberry cream dripping, white background`
+- **👶 幼年期**: `One single Baby Dessert Fox, solo, tiny fox kit sitting playfully, head tilted, extremely small and round body, one fluffy tail shaped like soft-serve ice cream swirl, ears decorated with mini macarons, pastel pink and cream white fur, big sparkly eyes, paws like petit fours, chibi, white background`
+- **🧒 少年期**: `One single Young Dessert Fox, solo, playful prancing pose, three swirling tails made of pink whipped cream and strawberry candy swirls, soft pink cream colored fur with sprinkles pattern, wearing a cupcake beret with strawberry on top, developing pastry magic, cookie and wafer accessories, pink and cream white and rose gold colors, dynamic pose, white background`
+- **💪 成熟期**: `One single Adult Dessert Fox, solo, elegant sitting pose, six magnificent tails each made of different desserts including macaron cream roll lollipop donut cake and candy, body adorned with golden sugar glaze, wearing a patisserie crystal tiara, sweet magic aura with floating candy particles, pastel pink and gold, battle-ready pose, white background`
+- **👑 完全体**: `One single Ultimate Dessert Fox Nine-Tailed Patisserie Goddess, solo, massive divine fox, mature serene powerful expression not cute, god-like presence, nine enormous tails each a different legendary dessert masterpiece swirling with magical cream and sugar energy, body coated in crystallized sugar armor with golden caramel veins, floating pastry constellation orbiting around body, divine sugar crystal crown, summoning a storm of magical sweets and confections, god-like majestic and enlightened presence, mature and transcendent, low angle epic shot, white background`
 
 ---
 

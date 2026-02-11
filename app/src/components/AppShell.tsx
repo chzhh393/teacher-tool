@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { NavLink, Outlet } from "react-router-dom"
+import ChunkErrorBoundary from "./ChunkErrorBoundary"
 
 import { signInAnonymously } from "../lib/cloudbaseAuth"
 import { CloudApi } from "../services/cloudApi"
@@ -145,7 +146,11 @@ const AppShell = () => {
       </header>
 
       <main className="mx-auto w-full max-w-[1400px] px-4 pt-6 pb-20 md:pb-6 animate-fade-in">
-        <Outlet />
+        <ChunkErrorBoundary>
+          <Suspense fallback={<div className="flex justify-center py-20"><p className="text-text-secondary">加载中...</p></div>}>
+            <Outlet />
+          </Suspense>
+        </ChunkErrorBoundary>
       </main>
 
       {/* 底部 Tab 导航 - 仅手机端 */}

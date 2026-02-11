@@ -17,6 +17,7 @@ const SERIES_MAP = {
 
 const BeastGallery = () => {
   const [seriesFilter, setSeriesFilter] = useState<"" | "dreamy" | "hot-blooded">("")
+  const [stageFilter, setStageFilter] = useState<"" | EvolutionStage>("")
   const [search, setSearch] = useState("")
 
   const filteredBeasts = beasts.filter((beast) => {
@@ -71,6 +72,16 @@ const BeastGallery = () => {
               className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-primary"
             />
             <select
+              value={stageFilter}
+              onChange={(e) => setStageFilter(e.target.value as typeof stageFilter)}
+              className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-text-secondary"
+            >
+              <option value="">全部形态</option>
+              {STAGES.map((s) => (
+                <option key={s.key} value={s.key}>{s.label}</option>
+              ))}
+            </select>
+            <select
               value={seriesFilter}
               onChange={(e) => setSeriesFilter(e.target.value as typeof seriesFilter)}
               className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-text-secondary"
@@ -87,11 +98,40 @@ const BeastGallery = () => {
             显示 {filteredBeasts.length} 只幻兽
           </p>
 
-          <div className="space-y-6">
-            {filteredBeasts.map((beast) => (
-              <BeastCard key={beast.id} beast={beast} />
-            ))}
-          </div>
+          {stageFilter ? (
+            <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
+              {filteredBeasts.map((beast) => {
+                const stageInfo = STAGES.find((s) => s.key === stageFilter)!
+                const seriesInfo = SERIES_MAP[beast.series]
+                return (
+                  <div key={beast.id} className="text-center">
+                    <div className="mb-2 aspect-square overflow-hidden rounded-lg bg-gray-50">
+                      <img
+                        src={beast.images[stageFilter]}
+                        alt={`${beast.name} - ${stageInfo.label}`}
+                        className="h-full w-full object-contain"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement
+                          target.style.display = "none"
+                          target.parentElement!.innerHTML = `<div class="flex h-full items-center justify-center text-xs text-red-400">缺失</div>`
+                        }}
+                      />
+                    </div>
+                    <p className="text-sm font-medium text-text-primary">{beast.name}</p>
+                    <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-semibold ${seriesInfo.color}`}>
+                      {seriesInfo.label}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {filteredBeasts.map((beast) => (
+                <BeastCard key={beast.id} beast={beast} />
+              ))}
+            </div>
+          )}
         </div>
       </section>
     </div>

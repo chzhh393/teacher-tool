@@ -880,7 +880,8 @@ const Settings = () => {
               <button
                 type="button"
                 onClick={handleAddStudent}
-                className="rounded-xl bg-success/10 px-3 py-2 text-sm font-semibold text-success"
+                disabled={loading}
+                className="rounded-xl bg-success/10 px-3 py-2 text-sm font-semibold text-success disabled:opacity-50"
               >
                 添加
               </button>
@@ -896,14 +897,16 @@ const Settings = () => {
               <button
                 type="button"
                 onClick={handleBatchImport}
-                className="rounded-xl bg-primary/10 px-3 py-2 text-sm font-semibold text-primary"
+                disabled={loading}
+                className="rounded-xl bg-primary/10 px-3 py-2 text-sm font-semibold text-primary disabled:opacity-50"
               >
                 批量添加
               </button>
               <button
                 type="button"
                 onClick={() => setExcelModalOpen(true)}
-                className="rounded-xl bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-600"
+                disabled={loading}
+                className="rounded-xl bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-600 disabled:opacity-50"
               >
                 Excel 导入
               </button>

@@ -12,10 +12,14 @@ const normalizeCode = (value) =>
     .replace(/[^A-Z0-9]/g, "")
 
 const findUserByUsername = async (db, username) => {
-  const result = await db.collection("TT_users").get()
-  return (result.data || [])
-    .map((row) => unwrap(row))
-    .find((row) => row && row.username === username)
+  const _ = db.command
+  const result = await db
+    .collection("TT_users")
+    .where(_.or([{ username }, { "data.username": username }]))
+    .limit(10)
+    .get()
+  const row = (result.data || [])[0]
+  return row ? unwrap(row) : null
 }
 
 const findActivationCode = async (db, code) => {
@@ -32,7 +36,7 @@ const findActivationCode = async (db, code) => {
   }
 
   if (!row) {
-    const allResult = await db.collection("TT_activation_codes").get()
+    const allResult = await db.collection("TT_activation_codes").limit(1000).get()
     row = (allResult.data || []).find((item) => {
       const raw = unwrap(item)
       return raw && normalizeCode(raw.code) === code

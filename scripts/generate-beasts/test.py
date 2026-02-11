@@ -16,9 +16,20 @@ from volcengine.visual.VisualService import VisualService
 
 # ============ 配置区域 ============
 
-# 火山引擎凭证 - 从环境变量读取
-ACCESS_KEY_ID = os.getenv("VOLCENGINE_ACCESS_KEY_ID", "")
-SECRET_ACCESS_KEY = os.getenv("VOLCENGINE_SECRET_ACCESS_KEY", "")
+# 从 .env 文件读取凭证
+def load_env():
+    env_path = os.path.join(os.path.dirname(__file__), ".env")
+    if os.path.exists(env_path):
+        with open(env_path) as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    key, value = line.split("=", 1)
+                    os.environ.setdefault(key.strip(), value.strip())
+
+load_env()
+ACCESS_KEY_ID = os.getenv("VOLC_ACCESS_KEY_ID", "")
+SECRET_ACCESS_KEY = os.getenv("VOLC_SECRET_ACCESS_KEY", "")
 
 # 通用前缀和后缀
 PROMPT_PREFIX = "3D cute cartoon style, blind box toy style, C4D render, clean white background, high quality, 8k, "

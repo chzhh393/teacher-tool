@@ -33,7 +33,7 @@ const handleList = async (db, user) => {
       { parentUserId: user.userId },
       { "data.parentUserId": user.userId },
     ])
-  ).get()
+  ).limit(100).get()
 
   const subAccounts = (result.data || []).map((row) => {
     const raw = unwrap(row)
@@ -188,7 +188,7 @@ const handleUpdate = async (db, user, event) => {
       { userId: subAccountId },
       { "data.userId": subAccountId },
     ])
-  ).get()
+  ).limit(100).get()
 
   const sessionUpdateData = {}
   if (nickname !== undefined) sessionUpdateData.nickname = nickname
@@ -244,7 +244,7 @@ const handleDelete = async (db, user, event) => {
       { userId: subAccountId },
       { "data.userId": subAccountId },
     ])
-  ).get()
+  ).limit(100).get()
   for (const sess of sessionsResult.data || []) {
     await db.collection("TT_sessions").doc(sess._id).remove()
   }

@@ -16,11 +16,18 @@ import type { ClassSummary, ScoreRule, Student } from "../types"
 import { getEvolutionStage, stageNames } from "../utils/evolution"
 import { normalizeScoreRecords, normalizeStudents } from "../utils/normalize"
 
+type SortMode = "default" | "name" | "score"
+type CardSize = "large" | "compact"
+
 const findBeast = (student: Student) => {
   const beastId = student.beastId || student.dinosaurId
   if (!beastId) return null
   return beasts.find((item) => item.id === beastId) || null
 }
+
+/** 将搜索文本拆分为多个姓名（支持空格、逗号、顿号、换行等分隔） */
+const parseSearchNames = (input: string): string[] =>
+  input.split(/[,，、;；\s\n\r]+/).map((s) => s.trim()).filter(Boolean)
 
 const Home = () => {
   const [summary, setSummary] = useState<ClassSummary | null>(null)
@@ -39,14 +46,33 @@ const Home = () => {
   const [notice, setNotice] = useState("")
   const [evolutionQueue, setEvolutionQueue] = useState<EvolutionEvent[]>([])
   const [shareOpen, setShareOpen] = useState(false)
+  const [sortMode, setSortMode] = useState<SortMode>(
+    () => (localStorage.getItem("tt-card-sort") as SortMode) || "default"
+  )
+  const [cardSize, setCardSize] = useState<CardSize>(
+    () => (localStorage.getItem("tt-card-size") as CardSize) || "large"
+  )
   const { classId, setClass } = useClassStore()
   const isSubAccount = useAuthStore((s) => s.role === "sub")
 
   const filteredStudents = useMemo(() => {
     const keyword = search.trim()
-    if (!keyword) return studentList
-    return studentList.filter((student) => student.name.includes(keyword))
-  }, [search, studentList])
+    let result: Student[]
+    if (!keyword) {
+      result = [...studentList]
+    } else {
+      const names = parseSearchNames(keyword)
+      result = names.length >= 2
+        ? studentList.filter((s) => names.some((n) => s.name.includes(n)))
+        : studentList.filter((student) => student.name.includes(keyword))
+    }
+    if (sortMode === "name") {
+      result.sort((a, b) => a.name.localeCompare(b.name, "zh-Hans"))
+    } else if (sortMode === "score") {
+      result.sort((a, b) => (b.earnedScore ?? 0) - (a.earnedScore ?? 0))
+    }
+    return result
+  }, [search, studentList, sortMode])
 
   const refresh = async (activeClassId?: string) => {
     if (!activeClassId) {
@@ -123,6 +149,11 @@ const Home = () => {
     return () => window.clearTimeout(timer)
   }, [notice])
 
+  useEffect(() => { localStorage.setItem("tt-card-sort", sortMode) }, [sortMode])
+  useEffect(() => { localStorage.setItem("tt-card-size", cardSize) }, [cardSize])
+
+  const isCompact = cardSize === "compact"
+
   const toggleBatch = () => {
     setBatchMode((prev) => !prev)
     setSelectedIds([])
@@ -141,6 +172,25 @@ const Home = () => {
 
   const handleClearSelection = () => {
     setSelectedIds([])
+  }
+
+  const handleQuickSelect = () => {
+    const keyword = search.trim()
+    if (!keyword) return
+    const names = parseSearchNames(keyword)
+    const matched = studentList.filter((s) => names.some((n) => s.name.includes(n)))
+    if (matched.length === 0) {
+      setNotice("未找到匹配的学生")
+      return
+    }
+    setSelectedIds((prev) => [...new Set([...prev, ...matched.map((s) => s.id)])])
+    setSearch("")
+    const unmatched = names.filter((n) => !studentList.some((s) => s.name.includes(n)))
+    if (unmatched.length > 0) {
+      setNotice(`已选中 ${matched.length} 人，未找到：${unmatched.join("、")}`)
+    } else {
+      setNotice(`已选中 ${matched.length} 人`)
+    }
   }
 
   const openScoreModal = (student?: Student) => {
@@ -353,9 +403,40 @@ const Home = () => {
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 md:w-40"
-              placeholder="搜索学生..."
+              onKeyDown={(event) => {
+                if (batchMode && event.key === "Enter") {
+                  event.preventDefault()
+                  handleQuickSelect()
+                }
+              }}
+              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 md:w-60"
+              placeholder={batchMode ? "输入多个姓名 空格分隔..." : "搜索学生..."}
             />
+            {batchMode && search.trim() && (
+              <button
+                type="button"
+                onClick={handleQuickSelect}
+                className="rounded-lg bg-primary px-2 py-1.5 text-xs font-semibold text-white hover:brightness-105"
+              >
+                选中
+              </button>
+            )}
+            <select
+              value={sortMode}
+              onChange={(e) => setSortMode(e.target.value as SortMode)}
+              className="rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+            >
+              <option value="default">默认排序</option>
+              <option value="name">按姓名</option>
+              <option value="score">按积分</option>
+            </select>
+            <button
+              type="button"
+              onClick={() => setCardSize(isCompact ? "large" : "compact")}
+              className="btn-default rounded-lg px-3 py-1.5 text-xs font-semibold md:hidden"
+            >
+              {isCompact ? "大图" : "紧凑"}
+            </button>
             <button
               type="button"
               onClick={() => setShareOpen(true)}
@@ -384,7 +465,7 @@ const Home = () => {
         </div>
       </section>
 
-      <div className="mt-6 grid grid-cols-2 gap-2 md:grid-cols-3 md:gap-4 lg:grid-cols-4 xl:grid-cols-5">
+      <div className={`mt-6 grid ${isCompact ? "grid-cols-3 gap-1.5" : "grid-cols-2 gap-2"} md:grid-cols-3 md:gap-4 lg:grid-cols-4 xl:grid-cols-5`}>
         {filteredStudents.map((student, index) => {
           const beast = findBeast(student)
           const selected = selectedIds.includes(student.id)
@@ -404,7 +485,7 @@ const Home = () => {
                   batchMode ? toggleSelect(student.id) : openScoreModal(student)
                 }
               }}
-              className={`group relative cursor-pointer touch-manipulation rounded-2xl border p-2 text-left shadow-sm transition duration-200 md:p-4 ${batchMode ? "pt-8" : ""} ${isFeeding
+              className={`group relative cursor-pointer touch-manipulation border text-left shadow-sm transition duration-200 md:rounded-2xl md:p-4 ${isCompact ? "rounded-xl p-1.5" : "rounded-2xl p-2"} ${batchMode ? (isCompact ? "pt-6" : "pt-8") : ""} ${isFeeding
                 ? "border-primary bg-primary/5 shadow-lg ring-2 ring-primary/50 animate-pulse"
                 : selected
                   ? "border-primary bg-primary/5 shadow-md ring-1 ring-primary"
@@ -413,7 +494,7 @@ const Home = () => {
             >
               {batchMode ? (
                 <span
-                  className={`absolute left-3 top-3 flex h-6 w-6 items-center justify-center rounded-full border text-xs font-bold transition ${selected
+                  className={`absolute left-2 top-2 flex items-center justify-center rounded-full border font-bold transition ${isCompact ? "h-5 w-5 text-[10px]" : "h-6 w-6 text-xs"} ${selected
                     ? "border-primary bg-primary text-white shadow-sm"
                     : "border-gray-200 bg-white text-text-tertiary"
                     }`}
@@ -422,14 +503,16 @@ const Home = () => {
                 </span>
               ) : null}
               {/* 手机端：名字 等级 幻兽名 形态 一行 */}
-              <div className="mb-1 flex items-center gap-1 text-[10px] leading-tight md:hidden">
-                <span className="shrink-0 text-xs font-bold text-text-primary">{student.name}</span>
+              <div className={`mb-1 flex items-center gap-1 leading-tight md:hidden ${isCompact ? "text-[9px]" : "text-[10px]"}`}>
+                <span className={`shrink-0 font-bold text-text-primary ${isCompact ? "text-[11px]" : "text-xs"}`}>{student.name}</span>
                 <span className={`shrink-0 rounded px-1 py-0.5 font-semibold ${isMaxLevel ? "bg-amber-100 text-amber-700" : "bg-primary/10 text-primary"}`}>
                   {isMaxLevel ? "MAX" : `Lv.${student.level}`}
                 </span>
-                <span className="truncate text-text-tertiary">
-                  {beast ? `${beast.name}·${isMaxLevel ? "收集完成" : stageName}` : "未领养"}
-                </span>
+                {!isCompact && (
+                  <span className="truncate text-text-tertiary">
+                    {beast ? `${beast.name}·${isMaxLevel ? "收集完成" : stageName}` : "未领养"}
+                  </span>
+                )}
               </div>
               {/* 桌面端：名字+等级 */}
               <div className="hidden items-center justify-between mb-3 md:flex">
@@ -439,7 +522,7 @@ const Home = () => {
                 </span>
               </div>
 
-              <div className={`aspect-square max-h-28 mx-auto rounded-2xl p-2 flex items-center justify-center overflow-hidden md:max-h-none md:mx-0 md:p-4 ${isMaxLevel ? "bg-gradient-to-br from-amber-50 to-orange-50 ring-2 ring-amber-300/50" : isFeeding ? "bg-gradient-to-br from-primary/10 to-primary/5" : "bg-gradient-to-br from-gray-50 to-gray-100"}`}>
+              <div className={`aspect-square mx-auto flex items-center justify-center overflow-hidden md:max-h-none md:mx-0 md:rounded-2xl md:p-4 ${isCompact ? "max-h-16 rounded-xl p-1" : "max-h-28 rounded-2xl p-2"} ${isMaxLevel ? "bg-gradient-to-br from-amber-50 to-orange-50 ring-2 ring-amber-300/50" : isFeeding ? "bg-gradient-to-br from-primary/10 to-primary/5" : "bg-gradient-to-br from-gray-50 to-gray-100"}`}>
                 {beast ? (
                   <img
                     src={beast.images[stage]}
@@ -481,8 +564,8 @@ const Home = () => {
                 )}
               </div>
 
-              {/* 手机端：未领养或满级时显示领养按钮 */}
-              {(isMaxLevel || !beast) && !isSubAccount && (
+              {/* 手机端：未领养或满级时显示领养按钮（紧凑模式隐藏） */}
+              {(isMaxLevel || !beast) && !isSubAccount && !isCompact && (
                 <div className="mt-2 md:hidden">
                   <button
                     type="button"
@@ -501,12 +584,12 @@ const Home = () => {
                 </div>
               )}
 
-              <div className="mt-2 md:mt-3">
+              <div className={`${isCompact ? "mt-1" : "mt-2"} md:mt-3`}>
                 <div className="hidden items-center justify-between text-xs text-text-tertiary mb-1 md:flex">
                   <span>{isMaxLevel ? "收集完成" : `进度 ${student.progress}%`}</span>
                   <span>成长值 {student.totalScore}</span>
                 </div>
-                <div className="h-1.5 w-full rounded-full bg-gray-100 overflow-hidden">
+                <div className={`${isCompact ? "h-1" : "h-1.5"} w-full rounded-full bg-gray-100 overflow-hidden`}>
                   <div
                     className={`h-full rounded-full transition-all duration-500 ${isMaxLevel ? "bg-gradient-to-r from-amber-400 to-orange-400" : isFeeding ? "bg-gradient-to-r from-primary via-primary/70 to-primary animate-pulse" : "bg-primary"}`}
                     style={{ width: isMaxLevel ? "100%" : `${student.progress}%` }}

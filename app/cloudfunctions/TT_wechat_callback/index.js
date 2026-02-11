@@ -96,10 +96,14 @@ exports.main = async (event = {}) => {
 }
 
 async function handleBind(db, userId, openid, unionId, nickname, avatar, now) {
+  const _ = db.command
   // 检查 openid 是否已被其他账号绑定
-  const existResult = await db.collection("TT_users").limit(1000).get()
-  const allUsers = (existResult.data || []).map((r) => unwrap(r))
-  const existingUser = allUsers.find((u) => u && u.wechatOpenId === openid)
+  const existResult = await db
+    .collection("TT_users")
+    .where(_.or([{ wechatOpenId: openid }, { "data.wechatOpenId": openid }]))
+    .limit(10)
+    .get()
+  const existingUser = (existResult.data || []).map((r) => unwrap(r)).find((u) => u && u.wechatOpenId === openid)
 
   if (existingUser && existingUser._id !== userId) {
     throw new Error("此微信已绑定其他账号")
@@ -129,10 +133,14 @@ async function handleBind(db, userId, openid, unionId, nickname, avatar, now) {
 }
 
 async function handleLogin(db, openid, unionId, nickname, avatar, now) {
+  const _ = db.command
   // 在 TT_users 中查找已绑定此 openid 的用户
-  const result = await db.collection("TT_users").limit(1000).get()
-  const allUsers = (result.data || []).map((r) => unwrap(r))
-  const user = allUsers.find((u) => u && u.wechatOpenId === openid)
+  const result = await db
+    .collection("TT_users")
+    .where(_.or([{ wechatOpenId: openid }, { "data.wechatOpenId": openid }]))
+    .limit(10)
+    .get()
+  const user = (result.data || []).map((r) => unwrap(r)).find((u) => u && u.wechatOpenId === openid)
 
   if (user) {
     // 场景 B：已绑定用户，直接登录

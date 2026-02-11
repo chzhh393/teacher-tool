@@ -3,22 +3,32 @@ import type { ReactNode } from "react"
 import { HashRouter, Navigate, Route, Routes } from "react-router-dom"
 
 import AppShell from "./components/AppShell"
+import ChunkErrorBoundary from "./components/ChunkErrorBoundary"
 import RequireAuth from "./components/RequireAuth"
-import Activate from "./routes/Activate"
 import Auth from "./routes/Auth"
-import InstallGuide from "./routes/InstallGuide"
-import Honors from "./routes/Honors"
 import Home from "./routes/Home"
-import Records from "./routes/Records"
-import Settings from "./routes/Settings"
-import Store from "./routes/Store"
-import BeastGallery from "./routes/BeastGallery"
-import Updates from "./routes/Updates"
-import WeChatBind from "./routes/WeChatBind"
-import ShareView from "./routes/ShareView"
 import { CloudApi } from "./services/cloudApi"
 import { useAuthStore } from "./stores/authStore"
 import { signInAnonymously } from "./lib/cloudbaseAuth"
+
+// 非 AppShell 路由的懒加载 fallback（全屏居中）
+const lazyFallback = (
+  <div className="min-h-screen flex items-center justify-center bg-background">
+    <p className="text-text-secondary">加载中...</p>
+  </div>
+)
+
+// 非首屏路由懒加载，减小主包体积
+const Settings = lazy(() => import("./routes/Settings"))
+const Records = lazy(() => import("./routes/Records"))
+const Honors = lazy(() => import("./routes/Honors"))
+const Store = lazy(() => import("./routes/Store"))
+const Updates = lazy(() => import("./routes/Updates"))
+const BeastGallery = lazy(() => import("./routes/BeastGallery"))
+const ShareView = lazy(() => import("./routes/ShareView"))
+const InstallGuide = lazy(() => import("./routes/InstallGuide"))
+const WeChatBind = lazy(() => import("./routes/WeChatBind"))
+const Activate = lazy(() => import("./routes/Activate"))
 
 // 后台管理页面仅在开发模式下加载，生产构建会 tree-shake 掉
 let adminRoutes: ReactNode = null
@@ -125,25 +135,27 @@ const App = () => {
   return (
     <HashRouter>
       <WeChatRedirectHandler />
-      <Routes>
-        <Route path="/auth" element={<Auth />} />
-        <Route path="/install-guide" element={<InstallGuide />} />
-        <Route path="/activate" element={<Activate />} />
-        <Route path="/wechat-bind" element={<WeChatBind />} />
-        <Route path="/s/:token" element={<ShareView />} />
-        <Route element={<RequireAuth />}>
-          <Route element={<AppShell />}>
-            <Route path="/" element={<Home />} />
-            <Route path="/honors" element={<Honors />} />
-            <Route path="/store" element={<Store />} />
-            <Route path="/records" element={<Records />} />
-            <Route path="/updates" element={<Updates />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/beast-gallery" element={<BeastGallery />} />
-            {adminRoutes}
+      <ChunkErrorBoundary>
+        <Routes>
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/install-guide" element={<Suspense fallback={lazyFallback}><InstallGuide /></Suspense>} />
+          <Route path="/activate" element={<Suspense fallback={lazyFallback}><Activate /></Suspense>} />
+          <Route path="/wechat-bind" element={<Suspense fallback={lazyFallback}><WeChatBind /></Suspense>} />
+          <Route path="/s/:token" element={<Suspense fallback={lazyFallback}><ShareView /></Suspense>} />
+          <Route element={<RequireAuth />}>
+            <Route element={<AppShell />}>
+              <Route path="/" element={<Home />} />
+              <Route path="/honors" element={<Honors />} />
+              <Route path="/store" element={<Store />} />
+              <Route path="/records" element={<Records />} />
+              <Route path="/updates" element={<Updates />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/beast-gallery" element={<BeastGallery />} />
+              {adminRoutes}
+            </Route>
           </Route>
-        </Route>
-      </Routes>
+        </Routes>
+      </ChunkErrorBoundary>
     </HashRouter>
   )
 }
