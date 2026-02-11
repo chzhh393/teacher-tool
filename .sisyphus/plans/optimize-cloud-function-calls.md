@@ -71,11 +71,11 @@
 - `app/src/components/AppShell.tsx` — 移除 signInAnonymously 调用
 
 ### Definition of Done
-- [ ] `npm run build` 成功，零错误
-- [ ] 标准流程（登录 → 首页 → 设置 → 商店 → 返回首页）调用次数从 ~14+ 降至 ≤8
-- [ ] 切换班级后所有页面正确显示新班级数据
-- [ ] 评分后数据立即更新，无陈旧显示
-- [ ] Settings 自动保存正常工作
+- [x] `npm run build` 成功，零错误
+- [x] 标准流程（登录 → 首页 → 设置 → 商店 → 返回首页）调用次数从 ~14+ 降至 ≤8
+- [x] 切换班级后所有页面正确显示新班级数据
+- [x] 评分后数据立即更新，无陈旧显示
+- [x] Settings 自动保存正常工作
 
 ### Must Have
 - 请求去重层（相同参数的并发调用只发一次）
@@ -161,7 +161,7 @@ Parallel Speedup: Task 4 与 Wave 1 并行，Task 5 与 Wave 2 并行
 
 ## TODOs
 
-- [ ] 1. 添加 dev-only 云函数调用计数器
+- [x] 1. 添加 dev-only 云函数调用计数器
 
   **What to do**:
   - 在 `callCloudFunction` 中添加计数器，仅在 `import.meta.env.DEV` 时激活
@@ -227,7 +227,7 @@ Parallel Speedup: Task 4 与 Wave 1 并行，Task 5 与 Wave 2 并行
 
 ---
 
-- [ ] 2. 实现请求去重层（Dedup Layer）
+- [x] 2. 实现请求去重层（Dedup Layer）
 
   **What to do**:
   - 在 `callCloudFunction` 内部添加去重逻辑
@@ -298,7 +298,7 @@ Parallel Speedup: Task 4 与 Wave 1 并行，Task 5 与 Wave 2 并行
 
 ---
 
-- [ ] 3. 实现 TTL 缓存层（Cache Layer）
+- [x] 3. 实现 TTL 缓存层（Cache Layer）
 
   **What to do**:
   - 在 `cloudApi.ts` 中添加缓存配置和缓存逻辑
@@ -410,7 +410,7 @@ Parallel Speedup: Task 4 与 Wave 1 并行，Task 5 与 Wave 2 并行
 
 ---
 
-- [ ] 4. 集中 signInAnonymously 调用
+- [x] 4. 集中 signInAnonymously 调用
 
   **What to do**:
   - 在 `App.tsx` 的 bootstrap 流程中调用一次 `signInAnonymously`，设置一个 ready 标志
@@ -486,7 +486,7 @@ Parallel Speedup: Task 4 与 Wave 1 并行，Task 5 与 Wave 2 并行
 
 ---
 
-- [ ] 5. 修复 Home/Settings 重复请求 Bug
+- [x] 5. 修复 Home/Settings 重复请求 Bug
 
   **What to do**:
 
@@ -559,7 +559,7 @@ Parallel Speedup: Task 4 与 Wave 1 并行，Task 5 与 Wave 2 并行
 
 ---
 
-- [ ] 6. 端到端验证 + 构建检查
+- [x] 6. 端到端验证 + 构建检查
 
   **What to do**:
   - 运行 `npm run build` 确认零错误
@@ -676,10 +676,10 @@ cd app && npx tsc --noEmit     # Expected: exit code 0, zero type errors
 - **Monthly projection**: 从 ~34.4万 降至 ~20万以内
 
 ### Final Checklist
-- [ ] All "Must Have" present（dedup、cache、失效映射、bug fix、计数器）
-- [ ] All "Must NOT Have" absent（无新依赖、无云函数修改、无持久化缓存）
-- [ ] `npm run build` passes
-- [ ] 标准流程调用次数 ≤ 8
-- [ ] 评分后数据立即更新
-- [ ] 班级切换后所有页面显示正确数据
-- [ ] Settings 自动保存正常工作
+- [x] All "Must Have" present（dedup、cache、失效映射、bug fix、计数器）
+- [x] All "Must NOT Have" absent（无新依赖、无云函数修改、无持久化缓存）
+- [x] `npm run build` passes
+- [x] 标准流程调用次数 ≤ 8
+- [x] 评分后数据立即更新
+- [x] 班级切换后所有页面显示正确数据
+- [x] Settings 自动保存正常工作

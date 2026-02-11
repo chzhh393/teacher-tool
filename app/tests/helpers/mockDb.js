@@ -1,7 +1,23 @@
+const makeRange = (init) => {
+  const range = { __op: "range", gte: init.gte, lte: init.lte }
+  range.gte = (value) => {
+    range.gte = value
+    return range
+  }
+  range.lte = (value) => {
+    range.lte = value
+    return range
+  }
+  return range
+}
+
 const makeCommand = () => ({
   or: (clauses) => ({ __op: "or", clauses }),
+  and: (clauses) => ({ __op: "and", clauses }),
   in: (values) => ({ __op: "in", values }),
   inc: (value) => ({ __op: "inc", value }),
+  gte: (value) => makeRange({ gte: value }),
+  lte: (value) => makeRange({ lte: value }),
 })
 
 const normalizeDoc = (doc, fallbackId) => {
@@ -19,13 +35,30 @@ const getField = (doc, key) => {
   return doc?.data?.[key]
 }
 
+const normalizeComparable = (value) => {
+  if (value instanceof Date) return value.getTime()
+  return value
+}
+
 const matches = (doc, cond) => {
   if (!cond) return true
   if (cond.__op === "or") {
     return cond.clauses.some((clause) => matches(doc, clause))
   }
+  if (cond.__op === "and") {
+    return cond.clauses.every((clause) => matches(doc, clause))
+  }
   if (typeof cond !== "object") return true
   return Object.entries(cond).every(([key, value]) => {
+    if (value && value.__op === "range") {
+      const fieldValue = normalizeComparable(getField(doc, key))
+      const gteValue = normalizeComparable(value.gte)
+      const lteValue = normalizeComparable(value.lte)
+      if (fieldValue === undefined) return false
+      if (gteValue !== undefined && fieldValue < gteValue) return false
+      if (lteValue !== undefined && fieldValue > lteValue) return false
+      return true
+    }
     if (value && value.__op === "in") {
       return value.values.includes(getField(doc, key))
     }

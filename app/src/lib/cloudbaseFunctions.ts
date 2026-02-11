@@ -1,4 +1,5 @@
 import { cloudbaseApp, isCloudbaseConfigured } from "./cloudbase"
+import { signInAnonymously } from "./cloudbaseAuth"
 
 // DEV ONLY: Extend Window interface for call counter
 declare global {
@@ -46,6 +47,9 @@ export const callCloudFunction = async <TData extends object, TResult>(
       const count = window.__cfCallCount![name]
       console.log(`[CF] ${name} (第${count}次)`)
     }
+
+    // 确保匿名登录完成（首次调用时执行，后续命中缓存）
+    await signInAnonymously()
 
     const response = await cloudbaseApp.callFunction({
       name,

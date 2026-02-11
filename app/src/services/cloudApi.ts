@@ -59,57 +59,147 @@ import type {
 } from "../types/api"
 import type { UserRole } from "../types"
 
+// ---------------------------------------------------------------------------
+// Cache infrastructure
+// ---------------------------------------------------------------------------
+interface CacheEntry<T> {
+  data: T
+  expiry: number
+}
+
+const cache = new Map<string, CacheEntry<unknown>>()
+
+// Per-function TTL configuration (in seconds)
+const CACHE_TTL: Record<string, number> = {
+  TT_class_list: 300,      // 5 minutes – class list rarely changes
+  TT_settings_get: 60,     // 1 minute – might edit on another device
+  TT_student_list: 15,     // 15 seconds – scores change during active sessions
+  TT_shop_list: 60,        // 1 minute – items rarely change mid-session
+  TT_honors_list: 30,      // 30 seconds – derived from student data
+  TT_class_get: 30,        // 30 seconds – class summary
+  TT_redeem_list: 30,      // 30 seconds – redeem records
+  TT_record_summary: 30,   // 30 seconds – stats overview
+  // TT_record_list: 0,    // Don't cache – paginated, params vary
+}
+
+// Write operation → cache keys to invalidate
+const INVALIDATION_MAP: Record<string, string[]> = {
+  TT_settings_save: ["TT_settings_get"],
+  TT_shop_save: ["TT_shop_list"],
+  TT_student_upsert: ["TT_student_list", "TT_honors_list", "TT_class_get"],
+  TT_student_delete: ["TT_student_list", "TT_honors_list", "TT_class_get"],
+  TT_score_batch: ["TT_student_list", "TT_honors_list", "TT_class_get", "TT_record_list", "TT_record_summary"],
+  TT_score_revoke: ["TT_student_list", "TT_honors_list", "TT_class_get", "TT_record_list", "TT_record_summary"],
+  TT_shop_redeem: ["TT_student_list", "TT_redeem_list", "TT_shop_list"],
+  TT_class_upsert: ["TT_class_list", "TT_class_get"],
+  TT_class_delete: ["TT_class_list"], // + all keys for deleted classId
+  TT_group_manage: ["TT_honors_list"], // for save action
+}
+
+/**
+ * Invalidate all cache entries whose key starts with any of the prefixes
+ * mapped to the given function name.
+ */
+const invalidateCache = (functionName: string) => {
+  const prefixes = INVALIDATION_MAP[functionName]
+  if (!prefixes) return
+
+  for (const key of cache.keys()) {
+    for (const prefix of prefixes) {
+      if (key.startsWith(prefix)) {
+        cache.delete(key)
+        break
+      }
+    }
+  }
+}
+
+/**
+ * Wrapper around `callCloudFunction` that adds a transparent read-through
+ * cache with per-function TTL.  Write operations should NOT use this –
+ * they call `callCloudFunction` directly and trigger `invalidateCache`.
+ */
+const cachedCall = async <TData extends object, TResult>(
+  name: string,
+  data?: TData,
+  skipCache = false
+): Promise<TResult> => {
+  const ttl = CACHE_TTL[name]
+  const shouldCache = ttl && ttl > 0 && !skipCache
+
+  if (shouldCache) {
+    const cacheKey = `${name}::${JSON.stringify(data)}`
+    const entry = cache.get(cacheKey)
+
+    if (entry && entry.expiry > Date.now()) {
+      return entry.data as TResult
+    }
+
+    const result = await callCloudFunction<TData, TResult>(name, data)
+    cache.set(cacheKey, { data: result, expiry: Date.now() + ttl * 1000 })
+    return result
+  }
+
+  return callCloudFunction<TData, TResult>(name, data)
+}
+
 const getToken = () => useAuthStore.getState().token
 
 export const CloudApi = {
   classGet: async (data?: TTClassGetRequest) => {
-    return callCloudFunction<TTClassGetRequest & { token?: string }, TTClassGetResponse>(
+    return cachedCall<TTClassGetRequest & { token?: string }, TTClassGetResponse>(
       "TT_class_get",
       { ...data, token: getToken() } as TTClassGetRequest & { token?: string }
     )
   },
   classList: async () => {
-    return callCloudFunction<{ token: string }, TTClassListResponse>("TT_class_list", {
+    return cachedCall<{ token: string }, TTClassListResponse>("TT_class_list", {
       token: getToken(),
     })
   },
   classUpsert: async (data: TTClassUpsertRequest) => {
+    invalidateCache("TT_class_upsert")
     return callCloudFunction<TTClassUpsertRequest & { token: string }, TTClassUpsertResponse>(
       "TT_class_upsert",
       { ...data, token: getToken() }
     )
   },
   classDelete: async (data: TTClassDeleteRequest) => {
+    invalidateCache("TT_class_delete")
     return callCloudFunction<TTClassDeleteRequest & { token: string }, TTClassDeleteResponse>(
       "TT_class_delete",
       { ...data, token: getToken() }
     )
   },
   studentList: async (data?: TTStudentListRequest) => {
-    return callCloudFunction<TTStudentListRequest & { token: string }, TTStudentListResponse>(
+    return cachedCall<TTStudentListRequest & { token: string }, TTStudentListResponse>(
       "TT_student_list",
       { ...data, token: getToken() } as TTStudentListRequest & { token: string }
     )
   },
   studentUpsert: async (data: TTStudentUpsertRequest) => {
+    invalidateCache("TT_student_upsert")
     return callCloudFunction<TTStudentUpsertRequest & { token: string }, TTStudentUpsertResponse>(
       "TT_student_upsert",
       { ...data, token: getToken() }
     )
   },
   studentDelete: async (data: TTStudentDeleteRequest) => {
+    invalidateCache("TT_student_delete")
     return callCloudFunction<TTStudentDeleteRequest & { token: string }, TTStudentDeleteResponse>(
       "TT_student_delete",
       { ...data, token: getToken() }
     )
   },
   scoreBatch: async (data: TTScoreBatchRequest) => {
+    invalidateCache("TT_score_batch")
     return callCloudFunction<TTScoreBatchRequest & { token: string }, TTScoreBatchResponse>(
       "TT_score_batch",
       { ...data, token: getToken() }
     )
   },
   scoreRevoke: async (data: TTScoreRevokeRequest) => {
+    invalidateCache("TT_score_revoke")
     return callCloudFunction<TTScoreRevokeRequest & { token: string }, TTScoreRevokeResponse>(
       "TT_score_revoke",
       { ...data, token: getToken() }
@@ -128,48 +218,51 @@ export const CloudApi = {
     )
   },
   recordSummary: async (data: TTRecordSummaryRequest) => {
-    return callCloudFunction<TTRecordSummaryRequest & { token: string }, TTRecordSummaryResponse>(
+    return cachedCall<TTRecordSummaryRequest & { token: string }, TTRecordSummaryResponse>(
       "TT_record_summary",
       { ...data, token: getToken() }
     )
   },
   shopList: async (data?: TTShopListRequest) => {
-    return callCloudFunction<TTShopListRequest & { token: string }, TTShopListResponse>(
+    return cachedCall<TTShopListRequest & { token: string }, TTShopListResponse>(
       "TT_shop_list",
       { ...data, token: getToken() } as TTShopListRequest & { token: string }
     )
   },
   shopSave: async (data: TTShopSaveRequest) => {
+    invalidateCache("TT_shop_save")
     return callCloudFunction<TTShopSaveRequest & { token: string }, TTShopSaveResponse>(
       "TT_shop_save",
       { ...data, token: getToken() }
     )
   },
   shopRedeem: async (data: TTShopRedeemRequest) => {
+    invalidateCache("TT_shop_redeem")
     return callCloudFunction<TTShopRedeemRequest & { token: string }, TTShopRedeemResponse>(
       "TT_shop_redeem",
       { ...data, token: getToken() }
     )
   },
   redeemList: async (data: TTRedeemListRequest) => {
-    return callCloudFunction<TTRedeemListRequest & { token: string }, TTRedeemListResponse>(
+    return cachedCall<TTRedeemListRequest & { token: string }, TTRedeemListResponse>(
       "TT_redeem_list",
       { ...data, token: getToken() }
     )
   },
   honorsList: async (data?: TTHonorsListRequest) => {
-    return callCloudFunction<TTHonorsListRequest & { token: string }, TTHonorsListResponse>(
+    return cachedCall<TTHonorsListRequest & { token: string }, TTHonorsListResponse>(
       "TT_honors_list",
       { ...data, token: getToken() } as TTHonorsListRequest & { token: string }
     )
   },
   settingsGet: async (data: TTSettingsGetRequest) => {
-    return callCloudFunction<TTSettingsGetRequest & { token: string }, TTSettingsGetResponse>(
+    return cachedCall<TTSettingsGetRequest & { token: string }, TTSettingsGetResponse>(
       "TT_settings_get",
       { ...data, token: getToken() }
     )
   },
   settingsSave: async (data: TTSettingsSaveRequest) => {
+    invalidateCache("TT_settings_save")
     return callCloudFunction<TTSettingsSaveRequest & { token: string }, TTSettingsSaveResponse>(
       "TT_settings_save",
       { ...data, token: getToken() }
@@ -312,6 +405,7 @@ export const CloudApi = {
     )
   },
   groupSave: async (data: TTGroupSaveRequest) => {
+    invalidateCache("TT_group_manage")
     return callCloudFunction<TTGroupSaveRequest & { token: string; action: "save" }, TTGroupSaveResponse>(
       "TT_group_manage",
       { ...data, token: getToken(), action: "save" }
@@ -376,5 +470,8 @@ export const CloudApi = {
         }>
       }>
     }>("TT_ops_overview")
+  },
+  _clearCache: () => {
+    cache.clear()
   },
 }

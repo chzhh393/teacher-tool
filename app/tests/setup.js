@@ -1,4 +1,5 @@
 import Module from "node:module"
+import { EventEmitter } from "node:events"
 
 const originalRequire = Module.prototype.require
 
@@ -22,6 +23,38 @@ Module.prototype.require = function patchedRequire(id, ...rest) {
     return {
       hash: async (value) => `hashed:${value}`,
       compare: async (value, hashed) => hashed === `hashed:${value}`,
+    }
+  }
+  if (id === "https") {
+    return {
+      get: (url, cb) => {
+        const res = new EventEmitter()
+        const queue = Array.isArray(globalThis.__httpsMockQueue)
+          ? globalThis.__httpsMockQueue
+          : []
+        let response = {}
+        for (let i = 0; i < queue.length; i += 1) {
+          const item = queue[i]
+          if (!item || !item.match || item.match.test(url)) {
+            response = item?.response ?? item ?? {}
+            queue.splice(i, 1)
+            break
+          }
+        }
+        process.nextTick(() => {
+          cb(res)
+          const payload = JSON.stringify(response || {})
+          res.emit("data", payload)
+          res.emit("end")
+        })
+        return {
+          on: (event, handler) => {
+            if (event === "error" && globalThis.__httpsMockError) {
+              process.nextTick(() => handler(globalThis.__httpsMockError))
+            }
+          },
+        }
+      },
     }
   }
   return originalRequire.call(this, id, ...rest)
