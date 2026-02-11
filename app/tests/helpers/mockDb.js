@@ -63,7 +63,7 @@ class MockQuery {
   }
 
   _apply() {
-    let rows = this.collection._docs.filter((doc) => matches(doc, this.condition))
+    let rows = this.collection._store.docs.filter((doc) => matches(doc, this.condition))
     if (this._orderBy) {
       const { field, direction } = this._orderBy
       const factor = direction === "desc" ? -1 : 1
@@ -86,13 +86,16 @@ class MockQuery {
   }
 
   async count() {
-    return { total: this.collection._docs.filter((doc) => matches(doc, this.condition)).length }
+    return { total: this.collection._store.docs.filter((doc) => matches(doc, this.condition)).length }
   }
 
   async remove() {
-    const before = this.collection._docs.length
-    this.collection._docs = this.collection._docs.filter((doc) => !matches(doc, this.condition))
-    return { deleted: before - this.collection._docs.length }
+    const docs = this.collection._store.docs
+    const before = docs.length
+    const remaining = docs.filter((doc) => !matches(doc, this.condition))
+    docs.length = 0
+    docs.push(...remaining)
+    return { deleted: before - docs.length }
   }
 }
 
@@ -103,25 +106,27 @@ class MockDoc {
   }
 
   async get() {
-    const doc = this.collection._docs.find((item) => item._id === this.id)
+    const doc = this.collection._store.docs.find((item) => item._id === this.id)
     return { data: doc ? [doc] : [] }
   }
 
   async set({ data }) {
     const normalized = normalizeDoc({ _id: this.id, data }, this.id)
-    const index = this.collection._docs.findIndex((item) => item._id === this.id)
+    const docs = this.collection._store.docs
+    const index = docs.findIndex((item) => item._id === this.id)
     if (index >= 0) {
-      this.collection._docs[index] = normalized
+      docs[index] = normalized
     } else {
-      this.collection._docs.push(normalized)
+      docs.push(normalized)
     }
     return { id: this.id }
   }
 
   async update({ data }) {
-    const index = this.collection._docs.findIndex((item) => item._id === this.id)
+    const docs = this.collection._store.docs
+    const index = docs.findIndex((item) => item._id === this.id)
     if (index < 0) return { updated: 0 }
-    const current = this.collection._docs[index]
+    const current = docs[index]
     const next = { ...current, data: { ...current.data } }
     for (const [key, value] of Object.entries(data || {})) {
       if (value && value.__op === "inc") {
@@ -134,21 +139,24 @@ class MockDoc {
         next[key] = value
       }
     }
-    this.collection._docs[index] = next
+    docs[index] = next
     return { updated: 1 }
   }
 
   async remove() {
-    const before = this.collection._docs.length
-    this.collection._docs = this.collection._docs.filter((item) => item._id !== this.id)
-    return { deleted: before - this.collection._docs.length }
+    const docs = this.collection._store.docs
+    const before = docs.length
+    const remaining = docs.filter((item) => item._id !== this.id)
+    docs.length = 0
+    docs.push(...remaining)
+    return { deleted: before - docs.length }
   }
 }
 
 class MockCollection {
-  constructor(name, docs) {
+  constructor(name, store) {
     this.name = name
-    this._docs = docs
+    this._store = store
   }
 
   where(condition) {
@@ -168,7 +176,7 @@ class MockCollection {
   }
 
   async get() {
-    return { data: this._docs }
+    return { data: this._store.docs }
   }
 
   doc(id) {
@@ -176,9 +184,9 @@ class MockCollection {
   }
 
   async add({ data }) {
-    const id = `${this.name}-${this._docs.length + 1}`
+    const id = `${this.name}-${this._store.docs.length + 1}`
     const normalized = normalizeDoc({ _id: id, data }, id)
-    this._docs.push(normalized)
+    this._store.docs.push(normalized)
     return { id }
   }
 }
@@ -190,7 +198,7 @@ export const createMockDb = (seed = {}) => {
   const load = (name) => {
     if (!collections.has(name)) {
       const docs = (seed[name] || []).map((doc, idx) => normalizeDoc(doc, `${name}-${idx + 1}`))
-      collections.set(name, docs)
+      collections.set(name, { docs })
     }
     return collections.get(name)
   }
@@ -198,6 +206,6 @@ export const createMockDb = (seed = {}) => {
   return {
     command,
     collection: (name) => new MockCollection(name, load(name)),
-    __getCollection: (name) => load(name),
+    __getCollection: (name) => load(name).docs,
   }
 }

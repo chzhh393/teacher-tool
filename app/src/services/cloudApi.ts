@@ -17,6 +17,8 @@ import type {
   TTRecordExportResponse,
   TTRecordListRequest,
   TTRecordListResponse,
+  TTRecordSummaryRequest,
+  TTRecordSummaryResponse,
   TTRedeemListRequest,
   TTRedeemListResponse,
   TTScoreBatchRequest,
@@ -123,6 +125,12 @@ export const CloudApi = {
     return callCloudFunction<{ token: string }, TTRecordExportResponse>(
       "TT_record_export",
       { token: getToken() }
+    )
+  },
+  recordSummary: async (data: TTRecordSummaryRequest) => {
+    return callCloudFunction<TTRecordSummaryRequest & { token: string }, TTRecordSummaryResponse>(
+      "TT_record_summary",
+      { ...data, token: getToken() }
     )
   },
   shopList: async (data?: TTShopListRequest) => {

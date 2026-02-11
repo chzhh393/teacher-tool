@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react"
 import { useParams } from "react-router-dom"
-import { signInAnonymously } from "../lib/cloudbaseAuth"
 import { CloudApi } from "../services/cloudApi"
 import { beasts } from "../data/beasts"
 import { getEvolutionStage, stageNames } from "../utils/evolution"
@@ -191,7 +190,7 @@ const ShareStudentView = ({ data, onRefresh }: { data: TTShareViewStudentData; o
               {/* 幻兽大图 */}
               <div className={`aspect-square max-h-64 mx-auto rounded-2xl p-4 flex items-center justify-center overflow-hidden ${isMaxLevel ? "bg-gradient-to-br from-amber-50 to-orange-50 ring-2 ring-amber-300/50" : "bg-gradient-to-br from-gray-50 to-gray-100"}`}>
                 <img
-                  src={beast?.images[stage] || "/beasts/egg_default.png"}
+                  src={beast?.images[stage] || "/beasts/egg_default.webp"}
                   alt={student.beastName || "幻兽"}
                   className="h-full w-full object-contain drop-shadow-lg"
                 />
@@ -324,7 +323,6 @@ export default function ShareView() {
     setError(null)
 
     try {
-      await signInAnonymously()
       const result = await CloudApi.shareView({ shareToken: token })
 
       if ("error" in result) {

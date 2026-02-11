@@ -8,7 +8,6 @@ import ScoreModal from "../components/ScoreModal"
 import ShareModal from "../components/ShareModal"
 import { beasts } from "../data/beasts"
 import { getDefaultSettings } from "../data/defaults"
-import { signInAnonymously } from "../lib/cloudbaseAuth"
 import { CloudApi } from "../services/cloudApi"
 import { useAuthStore } from "../stores/authStore"
 import { useClassStore } from "../stores/classStore"
@@ -111,10 +110,7 @@ const Home = () => {
     const connect = async () => {
       setIsLoading(true)
       try {
-        const state = await signInAnonymously()
-        if (state) {
-          await refresh(classId)
-        }
+        await refresh(classId)
       } catch (error) {
         setSummary(null)
         setStudentList([])

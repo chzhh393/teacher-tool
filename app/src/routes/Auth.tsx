@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 
-import { signInAnonymously } from "../lib/cloudbaseAuth"
 import { CloudApi } from "../services/cloudApi"
 import { useAuthStore } from "../stores/authStore"
 import { useClassStore } from "../stores/classStore"
@@ -38,7 +37,6 @@ const Auth = () => {
   useEffect(() => {
     const init = async () => {
       try {
-        await signInAnonymously()
         setReady(true)
       } catch {
         setNotice("云服务连接失败，请刷新重试")

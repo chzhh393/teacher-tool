@@ -268,6 +268,52 @@ export interface TTWechatBindResponse {
   username: string
 }
 
+// ---- 成长记录概览 ----
+
+export interface TTRecordSummaryRequest {
+  classId?: string
+  timeRange: "week" | "month"
+}
+
+export interface StudentScoreSummary {
+  studentId: string
+  studentName: string
+  addCount: number
+  addTotal: number
+  subtractCount: number
+  subtractTotal: number
+  netScore: number
+}
+
+export interface RuleUsageSummary {
+  ruleId: string
+  ruleName: string
+  type: "add" | "subtract"
+  count: number
+  totalScore: number
+}
+
+export interface ClassScoreSummary {
+  totalAddCount: number
+  totalAddScore: number
+  totalSubtractCount: number
+  totalSubtractScore: number
+  totalOperations: number
+  netScore: number
+  activeStudentCount: number
+}
+
+export interface TTRecordSummaryResponse {
+  timeRange: {
+    type: "week" | "month"
+    startDate: string
+    endDate: string
+  }
+  studentSummaries: StudentScoreSummary[]
+  ruleSummaries: RuleUsageSummary[]
+  classSummary: ClassScoreSummary
+}
+
 // ---- 进度分享 ----
 
 export interface TTShareCreateRequest {

@@ -2,7 +2,6 @@ import { Suspense, useEffect, useState } from "react"
 import { NavLink, Outlet } from "react-router-dom"
 import ChunkErrorBoundary from "./ChunkErrorBoundary"
 
-import { signInAnonymously } from "../lib/cloudbaseAuth"
 import { CloudApi } from "../services/cloudApi"
 import { useAuthStore } from "../stores/authStore"
 import { useClassStore } from "../stores/classStore"
@@ -29,7 +28,6 @@ const AppShell = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        await signInAnonymously()
         if (!token) {
           setClasses([])
           return

@@ -172,27 +172,18 @@ const Settings = () => {
     }
   }, [classId, classInfo, setClass, token])
 
-  const refresh = useCallback(async (targetClassId?: string) => {
+   const refresh = useCallback(async (targetClassId?: string) => {
     const effectiveClassId = targetClassId || classId
     if (!effectiveClassId) return
 
     setLoading(true)
     try {
-      const [classListResult, settingsResult, studentResult, shopResult] = await Promise.all([
-        CloudApi.classList(),
+      const [settingsResult, studentResult, shopResult] = await Promise.all([
         CloudApi.settingsGet({ classId: effectiveClassId }),
         CloudApi.studentList({ classId: effectiveClassId }),
         CloudApi.shopList({ classId: effectiveClassId }),
       ])
 
-      const nextClasses = classListResult.classes || []
-      if (nextClasses.length > 0) {
-        setClasses(nextClasses)
-      } else if (classInfo.id && classInfo.name) {
-        setClasses([classInfo])
-      } else {
-        setClasses([])
-      }
       const remoteSettings = settingsResult.settings
       const fallbackSettings = getDefaultSettings()
       let loadedSettings: ClassSettings

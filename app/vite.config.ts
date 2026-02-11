@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import viteCompression from 'vite-plugin-compression'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -17,9 +18,14 @@ export default defineConfig({
   },
   plugins: [
     react(),
+    viteCompression({
+      algorithm: 'gzip',
+      threshold: 10240, // 10KB 以上才压缩
+      ext: '.gz',
+    }),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['vite.svg', 'beasts/**/*.png'],
+      includeAssets: ['vite.svg'],
       manifest: {
         name: '学生积分幻兽乐园',
         short_name: '幻兽乐园',
@@ -63,7 +69,7 @@ export default defineConfig({
             },
           },
           {
-            urlPattern: /\/beasts\/.+\.png$/i,
+            urlPattern: /\/beasts\/.+\.webp$/i,
             handler: 'CacheFirst',
             options: {
               cacheName: 'beast-images-cache',

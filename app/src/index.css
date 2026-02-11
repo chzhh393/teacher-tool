@@ -112,7 +112,17 @@ body {
 }
 
 /* 触屏设备禁用布局位移的 hover 效果，防止 click 事件丢失 */
-@media (pointer: coarse) {
+/* JS 检测（最可靠，覆盖360浏览器兼容模式等所有场景） */
+.has-touch .hover\:-translate-y-1:hover,
+.has-touch .card:hover {
+  --tw-translate-y: 0 !important;
+}
+.has-touch .group:hover .group-hover\:scale-110 {
+  --tw-scale-x: 1 !important;
+  --tw-scale-y: 1 !important;
+}
+/* CSS 媒体查询兜底 */
+@media (any-pointer: coarse) {
   .hover\:-translate-y-1:hover,
   .card:hover {
     --tw-translate-y: 0 !important;
