@@ -545,8 +545,9 @@ const Settings = () => {
       const result = await CloudApi.classUpsert({ classInfo: { id: `class-${Date.now()}`, name: name.trim() } })
       const newClassId = result.classInfo.id
 
-      // 从已有班级复制设置和商品
+      // 初始化设置和商品
       if (templateSource === "copy" && sourceClassId) {
+        // 从已有班级复制
         const [sourceSettingsResult, sourceShopResult] = await Promise.all([
           CloudApi.settingsGet({ classId: sourceClassId }),
           CloudApi.shopList({ classId: sourceClassId }),
@@ -561,6 +562,12 @@ const Settings = () => {
         await Promise.all([
           CloudApi.settingsSave({ classId: newClassId, settings: newSettings }),
           CloudApi.shopSave({ classId: newClassId, items: newShopItems }),
+        ])
+      } else {
+        // 默认模板：写入默认设置和商品
+        await Promise.all([
+          CloudApi.settingsSave({ classId: newClassId, settings: getDefaultSettings() }),
+          CloudApi.shopSave({ classId: newClassId, items: getDefaultShopItems() }),
         ])
       }
 
@@ -967,7 +974,7 @@ const Settings = () => {
                   </span>
                   <input
                     type="number"
-                    value={value}
+                    value={index === 0 ? value : (value || "")}
                     onChange={(event) => {
                       const next = [...settings.levelThresholds]
                       next[index] = Number(event.target.value)
@@ -1026,7 +1033,7 @@ const Settings = () => {
                       />
                       <input
                         type="number"
-                        value={rule.score}
+                        value={rule.score || ""}
                         onChange={(event) => handleRuleUpdate(rule.id, { score: Number(event.target.value) })}
                         className="w-14 shrink-0 rounded-xl border border-gray-200 px-2 py-1 text-sm md:w-20"
                       />
@@ -1071,7 +1078,7 @@ const Settings = () => {
                   dragListener={false}
                   className="rounded-2xl bg-white px-3 py-2"
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2 lg:flex-nowrap">
                     <div className="cursor-grab touch-none text-text-tertiary">::</div>
                     <input
                       value={item.icon}
@@ -1084,19 +1091,17 @@ const Settings = () => {
                       placeholder="商品名称"
                       className="min-w-0 flex-1 rounded-xl border border-gray-200 px-2 py-1 text-sm"
                     />
-                  </div>
-                  <div className="mt-2 flex items-center gap-2 pl-7">
                     <input
                       value={item.description}
                       onChange={(e) => handleShopItemUpdate(item.id, { description: e.target.value })}
                       placeholder="描述（选填）"
-                      className="min-w-0 flex-1 rounded-xl border border-gray-200 px-2 py-1 text-sm"
+                      className="min-w-0 flex-1 basis-full rounded-xl border border-gray-200 px-2 py-1 text-sm pl-7 lg:basis-auto lg:pl-2"
                     />
-                    <label className="flex shrink-0 items-center gap-1 text-xs text-text-secondary">
+                    <label className="ml-auto flex shrink-0 items-center gap-1 text-xs text-text-secondary lg:ml-0">
                       价格
                       <input
                         type="number"
-                        value={item.cost}
+                        value={item.cost || ""}
                         onChange={(e) => handleShopItemUpdate(item.id, { cost: Number(e.target.value) })}
                         className="w-10 rounded-lg border border-gray-200 px-1 py-1 text-xs text-center"
                       />
@@ -1105,7 +1110,7 @@ const Settings = () => {
                       库存
                       <input
                         type="number"
-                        value={item.stock}
+                        value={item.stock || ""}
                         onChange={(e) => handleShopItemUpdate(item.id, { stock: Number(e.target.value) })}
                         className="w-10 rounded-lg border border-gray-200 px-1 py-1 text-xs text-center"
                       />
