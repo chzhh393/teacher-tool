@@ -21,6 +21,13 @@ const getInitialUsername = (state: unknown) => {
   return ""
 }
 
+const getPurpose = (state: unknown): "activate" | "reset" => {
+  if (state && typeof state === "object" && "purpose" in state) {
+    return (state as { purpose?: string }).purpose === "reset" ? "reset" : "activate"
+  }
+  return "activate"
+}
+
 const normalizeCode = (value: string) => {
   return value
     .toUpperCase()
@@ -34,6 +41,7 @@ const Activate = () => {
   const { setAuth } = useAuthStore()
   const { clearClass } = useClassStore()
 
+  const [purpose] = useState(() => getPurpose(location.state))
   const [username, setUsername] = useState(() => getInitialUsername(location.state))
   const [code, setCode] = useState("")
   const [notice, setNotice] = useState("")
@@ -122,7 +130,9 @@ const Activate = () => {
       <div className="w-full max-w-md">
         <div className="rounded-[28px] bg-white/95 shadow-xl shadow-orange-100/60 border border-orange-50 overflow-hidden">
           <div className="px-8 py-10">
-            <h1 className="text-xl font-semibold text-text-primary text-center">激活您的账号</h1>
+            <h1 className="text-xl font-semibold text-text-primary text-center">
+              {purpose === "reset" ? "找回密码" : "激活您的账号"}
+            </h1>
 
             <div className="mt-6 rounded-2xl bg-orange-50/60 px-4 py-4 flex items-center gap-4">
               <div className="h-12 w-12 rounded-full bg-gradient-to-br from-orange-400 to-orange-200 text-white flex items-center justify-center text-lg font-semibold">
@@ -130,7 +140,9 @@ const Activate = () => {
               </div>
               <div>
                 <p className="text-sm font-semibold text-text-primary">{username || "未找到账号"}</p>
-                <p className="text-xs text-text-secondary">您的账号尚未激活</p>
+                <p className="text-xs text-text-secondary">
+                  {purpose === "reset" ? "使用激活码重置密码" : "您的账号尚未激活"}
+                </p>
               </div>
             </div>
 
@@ -146,9 +158,18 @@ const Activate = () => {
             </div>
 
             <div className="mt-3 space-y-1 text-xs text-text-secondary">
-              <p>• 请从购买页面复制激活码，粘贴到上方</p>
-              <p>• 格式：6 位字母/数字，不区分大小写</p>
-              <p>• 每个激活码仅能使用一次</p>
+              {purpose === "reset" ? (
+                <>
+                  <p>• 输入激活码即可重新登录并重置密码</p>
+                  <p>• 格式：6 位字母/数字，不区分大小写</p>
+                </>
+              ) : (
+                <>
+                  <p>• 请从购买页面复制激活码，粘贴到上方</p>
+                  <p>• 格式：6 位字母/数字，不区分大小写</p>
+                  <p>• 每个激活码仅能使用一次</p>
+                </>
+              )}
             </div>
 
             <button
@@ -166,13 +187,14 @@ const Activate = () => {
               <span className="h-px flex-1 bg-orange-100" />
             </div>
 
-            <button
-              type="button"
-              onClick={() => setNotice("请联系管理员获取激活码")}
-              className="mt-4 w-full rounded-xl border border-orange-200 py-3 text-sm font-semibold text-orange-500 hover:bg-orange-50 transition-colors"
+            <a
+              href="https://xhslink.com/m/3BIULrVjTlK"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 block w-full rounded-xl border border-orange-200 py-3 text-center text-sm font-semibold text-orange-500 hover:bg-orange-50 transition-colors"
             >
               点击这里购买
-            </button>
+            </a>
 
             <button
               type="button"

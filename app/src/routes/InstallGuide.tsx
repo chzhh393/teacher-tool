@@ -17,14 +17,17 @@ const iosSteps: Step[] = [
   {
     title: "点击底部「分享」按钮",
     desc: "Safari 底部工具栏中间的方形+箭头图标",
+    image: "/guide5.jpg",
   },
   {
     title: "滑动找到「添加到主屏幕」",
     desc: "在弹出的分享菜单中向上滑动，找到并点击此选项",
+    image: "/guide6.jpg",
   },
   {
     title: "点击右上角「添加」",
     desc: "确认名称后点击添加，桌面就会出现应用图标",
+    image: "/guide7.jpg",
   },
 ]
 
@@ -34,16 +37,19 @@ const androidSteps: Step[] = [
     desc: "推荐使用 Chrome，其他浏览器操作类似",
   },
   {
-    title: "点击右上角「菜单」按钮",
-    desc: "浏览器右上角的三个点图标",
+    title: "点击浏览器「菜单」按钮",
+    desc: "通常是右上角或右下角的三个点（⋮ 或 ⋯）图标",
+    image: "/guide3.jpg",
   },
   {
     title: "选择「添加到主屏幕」或「安装应用」",
     desc: "不同浏览器可能显示为「添加到桌面」",
+    image: "/guide4.jpg",
   },
   {
     title: "点击「安装」确认",
     desc: "确认后桌面就会出现应用图标，点击即可全屏使用",
+    image: "/guide8.jpg",
   },
 ]
 
@@ -64,6 +70,7 @@ const pcSteps: Step[] = [
   {
     title: "从桌面启动",
     desc: "安装完成后桌面会出现应用图标，双击即可打开，无需再开浏览器",
+    image: "/guide1.jpg",
   },
 ]
 
@@ -88,9 +95,7 @@ const InstallGuide = () => {
 
         {/* 标题区 */}
         <div className="text-center mb-8">
-          <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-3xl mb-4">
-            +
-          </div>
+          <img src="/pwa-egg-192x192.png" alt="幻兽学院" className="inline-block h-16 w-16 rounded-2xl mb-4" />
           <h1 className="text-xl font-bold text-text-primary">安装到桌面</h1>
           <p className="mt-2 text-sm text-text-secondary">
             像原生 App 一样使用，全屏体验更流畅

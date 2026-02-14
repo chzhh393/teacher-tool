@@ -17,6 +17,7 @@ const passwordHint = [
 ]
 
 const PENDING_USERNAME_KEY = "tt-pending-username"
+const REMEMBER_ME_KEY = "tt-remember-me"
 
 const Auth = () => {
   const [tab, setTab] = useState<"login" | "register">("login")
@@ -25,6 +26,7 @@ const Auth = () => {
   const [confirmPassword, setConfirmPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
   const [notice, setNotice] = useState("")
   const [loading, setLoading] = useState(false)
   const [ready, setReady] = useState(false)
@@ -43,6 +45,19 @@ const Auth = () => {
       }
     }
     init()
+
+    // 恢复记住的凭据
+    try {
+      const saved = localStorage.getItem(REMEMBER_ME_KEY)
+      if (saved) {
+        const { u, p } = JSON.parse(atob(saved))
+        if (u && p) {
+          setUsername(u)
+          setPassword(p)
+          setRememberMe(true)
+        }
+      }
+    } catch { /* ignore */ }
 
     // 显示微信回调的错误信息
     const wxError = localStorage.getItem("tt-wx-error")
@@ -63,6 +78,12 @@ const Auth = () => {
       const result = await CloudApi.authLogin({ username: username.trim(), password })
       clearClass()
       setAuth(result.token, result.username, result.role, result.nickname, result.canRedeem)
+      // 记住密码
+      if (rememberMe) {
+        localStorage.setItem(REMEMBER_ME_KEY, btoa(JSON.stringify({ u: username.trim(), p: password })))
+      } else {
+        localStorage.removeItem(REMEMBER_ME_KEY)
+      }
       if (typeof window !== "undefined") {
         localStorage.removeItem(PENDING_USERNAME_KEY)
       }
@@ -73,7 +94,7 @@ const Auth = () => {
         if (typeof window !== "undefined" && username.trim()) {
           localStorage.setItem(PENDING_USERNAME_KEY, username.trim())
         }
-        setNotice("账号未激活，请先激活")
+        navigate("/activate", { state: { username: username.trim() } })
       } else {
         setNotice("登录失败，请检查账号或密码")
       }
@@ -194,6 +215,18 @@ const Auth = () => {
               </div>
             ) : null}
 
+            {tab === "login" ? (
+              <label className="mt-3 flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary/30 cursor-pointer"
+                />
+                <span className="text-sm text-text-secondary">记住密码</span>
+              </label>
+            ) : null}
+
             {tab === "register" ? (
               <>
                 <label className="mt-6 block text-sm font-semibold text-text-primary">确认密码</label>
@@ -257,7 +290,7 @@ const Auth = () => {
                       if (typeof window !== "undefined" && username.trim()) {
                         localStorage.setItem(PENDING_USERNAME_KEY, username.trim())
                       }
-                      navigate("/activate", { state: { username: username.trim() } })
+                      navigate("/activate", { state: { username: username.trim(), purpose: "reset" } })
                     }}
                   >
                     忘记密码？使用激活码找回 →
@@ -285,7 +318,7 @@ const Auth = () => {
           to="/install-guide"
           className="mt-4 flex items-center gap-3 rounded-2xl bg-white/80 border border-primary/20 px-5 py-3.5 shadow-sm hover:shadow-md hover:border-primary/40 transition-all"
         >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-lg">+</span>
+          <img src="/pwa-egg-192x192.png" alt="幻兽学院" className="h-9 w-9 shrink-0 rounded-xl" />
           <div className="min-w-0">
             <p className="text-sm font-semibold text-text-primary">安装应用到桌面</p>
             <p className="text-xs text-text-secondary">像 App 一样打开，全屏体验更流畅</p>
