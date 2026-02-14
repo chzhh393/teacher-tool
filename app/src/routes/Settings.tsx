@@ -55,7 +55,7 @@ const DragItem = ({ value, children }: { value: unknown; children: React.ReactNo
       value={value}
       dragListener={false}
       dragControls={controls}
-      className="flex items-center gap-2 rounded-2xl bg-white px-3 py-2"
+      className="flex items-center gap-1.5 rounded-2xl bg-white px-2 py-2 md:gap-2 md:px-3"
     >
       <span
         className="cursor-grab active:cursor-grabbing text-text-tertiary select-none touch-none"
@@ -262,7 +262,7 @@ const Settings = () => {
         if (saveStatusTimerRef.current) clearTimeout(saveStatusTimerRef.current)
         saveStatusTimerRef.current = setTimeout(() => setSaveStatus("idle"), 3000)
       }
-    }, 1500)
+    }, 2500)
 
     return () => {
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
@@ -1015,7 +1015,7 @@ const Settings = () => {
               { label: "加分项", data: addRules, onReorder: handleReorderAddRules },
               { label: "扣分项", data: subtractRules, onReorder: handleReorderSubtractRules },
             ].map((group) => (
-              <div key={group.label} className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+              <div key={group.label} className="rounded-2xl border border-gray-100 bg-gray-50 p-2 md:p-4">
                 <p className="text-sm font-semibold text-text-primary">{group.label}</p>
                 <Reorder.Group axis="y" values={group.data} onReorder={group.onReorder} className="mt-3 space-y-3">
                   {group.data.map((rule) => (
@@ -1023,26 +1023,28 @@ const Settings = () => {
                       <input
                         value={rule.icon}
                         onChange={(event) => handleRuleUpdate(rule.id, { icon: event.target.value })}
-                        className="w-12 rounded-xl border border-gray-200 px-2 py-1 text-center"
+                        className="w-10 rounded-xl border border-gray-200 px-1 py-1 text-center md:w-12 md:px-2"
                       />
                       <input
                         value={rule.name}
                         onChange={(event) => handleRuleUpdate(rule.id, { name: event.target.value })}
                         placeholder="规则名称"
-                        className="flex-1 rounded-xl border border-gray-200 px-2 py-1 text-sm"
+                        className="min-w-0 flex-1 rounded-xl border border-gray-200 px-2 py-1 text-sm"
                       />
                       <input
                         type="number"
                         value={rule.score || ""}
                         onChange={(event) => handleRuleUpdate(rule.id, { score: Number(event.target.value) })}
-                        className="w-14 shrink-0 rounded-xl border border-gray-200 px-2 py-1 text-sm md:w-20"
+                        className="w-12 shrink-0 rounded-xl border border-gray-200 px-1 py-1 text-center text-sm md:w-20 md:px-2 md:text-left"
                       />
                       <button
                         type="button"
                         onClick={() => handleRuleRemove(rule.id)}
-                        className="text-xs text-danger"
+                        className="shrink-0 text-sm text-danger md:text-xs"
+                        title="删除"
                       >
-                        删除
+                        <span className="md:hidden">×</span>
+                        <span className="hidden md:inline">删除</span>
                       </button>
                     </DragItem>
                   ))}
@@ -1072,14 +1074,8 @@ const Settings = () => {
           {shopItems.length > 0 ? (
             <Reorder.Group axis="y" values={shopItems} onReorder={handleReorderShopItems} className="space-y-3">
               {shopItems.map((item) => (
-                <Reorder.Item
-                  key={item.id}
-                  value={item}
-                  dragListener={false}
-                  className="rounded-2xl bg-white px-3 py-2"
-                >
-                  <div className="flex flex-wrap items-center gap-2 lg:flex-nowrap">
-                    <div className="cursor-grab touch-none text-text-tertiary">::</div>
+                <DragItem key={item.id} value={item}>
+                  <div className="flex flex-1 flex-wrap items-center gap-2 lg:flex-nowrap">
                     <input
                       value={item.icon}
                       onChange={(e) => handleShopItemUpdate(item.id, { icon: e.target.value })}
@@ -1123,7 +1119,7 @@ const Settings = () => {
                       删除
                     </button>
                   </div>
-                </Reorder.Item>
+                </DragItem>
               ))}
             </Reorder.Group>
           ) : (
