@@ -21,9 +21,11 @@ const getInitialUsername = (state: unknown) => {
   return ""
 }
 
-const getPurpose = (state: unknown): "activate" | "reset" => {
+const getPurpose = (state: unknown): "activate" | "reset" | "lookup" => {
   if (state && typeof state === "object" && "purpose" in state) {
-    return (state as { purpose?: string }).purpose === "reset" ? "reset" : "activate"
+    const p = (state as { purpose?: string }).purpose
+    if (p === "reset") return "reset"
+    if (p === "lookup") return "lookup"
   }
   return "activate"
 }
@@ -41,9 +43,17 @@ const Activate = () => {
   const { setAuth } = useAuthStore()
   const { clearClass } = useClassStore()
 
-  const [purpose] = useState(() => getPurpose(location.state))
+  const [purpose] = useState(() => {
+    const p = getPurpose(location.state)
+    return p === "lookup" ? "activate" : p
+  })
   const [username, setUsername] = useState(() => getInitialUsername(location.state))
   const [code, setCode] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
+  const [lookupMode, setLookupMode] = useState(() => getPurpose(location.state) === "lookup")
+  const [lookupLoading, setLookupLoading] = useState(false)
   const [notice, setNotice] = useState("")
   const [loading, setLoading] = useState(false)
   const [ready, setReady] = useState(false)
@@ -72,10 +82,37 @@ const Activate = () => {
     }
   }, [username])
 
-  const handleActivate = async () => {
+  const handleLookup = async () => {
+    const normalized = normalizeCode(code)
+    if (!CODE_REG.test(normalized)) {
+      setNotice("请输入 6 位字母/数字激活码")
+      return
+    }
+    setLookupLoading(true)
+    setNotice("")
+    try {
+      const result = await CloudApi.authLookupUsername({ code: normalized })
+      setUsername(result.username)
+      setLookupMode(false)
+      setNotice(`已找到账号：${result.username}`)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : ""
+      if (message.includes("未绑定")) {
+        setNotice("该激活码尚未绑定账号")
+      } else if (message.includes("不存在")) {
+        setNotice("激活码无效")
+      } else {
+        setNotice("查询失败，请检查激活码")
+      }
+    } finally {
+      setLookupLoading(false)
+    }
+  }
+
+  const handleSubmit = async () => {
     if (!ready || loading) return
     if (!username) {
-      setNotice("未找到账号，请先注册")
+      setNotice(purpose === "reset" ? "请输入用户名" : "未找到账号，请先注册")
       return
     }
 
@@ -85,12 +122,29 @@ const Activate = () => {
       return
     }
 
+    if (purpose === "reset") {
+      if (!newPassword || newPassword.length < 6) {
+        setNotice("新密码至少 6 位")
+        return
+      }
+      if (newPassword !== confirmPassword) {
+        setNotice("两次密码不一致")
+        return
+      }
+    }
+
     setLoading(true)
     setNotice("")
     try {
-      const result = await CloudApi.authActivate({ username, code: normalized })
-      clearClass()
-      setAuth(result.token, result.username, result.role || "main", result.nickname || result.username)
+      if (purpose === "reset") {
+        const result = await CloudApi.authReset({ username, code: normalized, newPassword })
+        clearClass()
+        setAuth(result.token, result.username, result.role || "main", result.nickname || result.username, result.canRedeem)
+      } else {
+        const result = await CloudApi.authActivate({ username, code: normalized })
+        clearClass()
+        setAuth(result.token, result.username, result.role || "main", result.nickname || result.username)
+      }
       if (typeof window !== "undefined") {
         localStorage.removeItem(PENDING_USERNAME_KEY)
       }
@@ -108,7 +162,7 @@ const Activate = () => {
       } else if (message.includes("过期")) {
         setNotice("激活码已过期")
       } else {
-        setNotice("激活失败，请检查激活码")
+        setNotice(purpose === "reset" ? "重置失败，请检查激活码" : "激活失败，请检查激活码")
       }
     } finally {
       setLoading(false)
@@ -134,17 +188,36 @@ const Activate = () => {
               {purpose === "reset" ? "找回密码" : "激活您的账号"}
             </h1>
 
-            <div className="mt-6 rounded-2xl bg-orange-50/60 px-4 py-4 flex items-center gap-4">
-              <div className="h-12 w-12 rounded-full bg-gradient-to-br from-orange-400 to-orange-200 text-white flex items-center justify-center text-lg font-semibold">
-                {(username || "?").slice(0, 1).toUpperCase()}
+            {purpose === "reset" && !lookupMode ? (
+              <>
+                <label className="mt-6 block text-sm font-semibold text-text-primary">用户名</label>
+                <div className="mt-2 rounded-xl border border-gray-200 px-4 py-3 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+                  <input
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value.replace(/[^A-Za-z0-9_]/g, ""))}
+                    placeholder="请输入要找回密码的用户名"
+                    className="w-full text-sm outline-none placeholder:text-gray-400"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setLookupMode(true); setNotice("") }}
+                  className="mt-2 text-xs text-text-secondary hover:text-primary transition-colors"
+                >
+                  忘记用户名？用激活码查询 →
+                </button>
+              </>
+            ) : purpose !== "reset" ? (
+              <div className="mt-6 rounded-2xl bg-orange-50/60 px-4 py-4 flex items-center gap-4">
+                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-orange-400 to-orange-200 text-white flex items-center justify-center text-lg font-semibold">
+                  {(username || "?").slice(0, 1).toUpperCase()}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-text-primary">{username || "未找到账号"}</p>
+                  <p className="text-xs text-text-secondary">您的账号尚未激活</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-semibold text-text-primary">{username || "未找到账号"}</p>
-                <p className="text-xs text-text-secondary">
-                  {purpose === "reset" ? "使用激活码重置密码" : "您的账号尚未激活"}
-                </p>
-              </div>
-            </div>
+            ) : null}
 
             <label className="mt-6 block text-sm font-semibold text-text-primary">激活码</label>
             <div className="mt-2 rounded-xl border border-gray-200 px-4 py-3 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all flex items-center gap-3">
@@ -157,29 +230,90 @@ const Activate = () => {
               />
             </div>
 
-            <div className="mt-3 space-y-1 text-xs text-text-secondary">
-              {purpose === "reset" ? (
-                <>
-                  <p>• 输入激活码即可重新登录并重置密码</p>
+            {lookupMode ? (
+              <>
+                <div className="mt-3 space-y-1 text-xs text-text-secondary">
+                  <p>• 输入您当初使用的激活码，即可查出对应用户名</p>
                   <p>• 格式：6 位字母/数字，不区分大小写</p>
-                </>
-              ) : (
-                <>
-                  <p>• 请从购买页面复制激活码，粘贴到上方</p>
-                  <p>• 格式：6 位字母/数字，不区分大小写</p>
-                  <p>• 每个激活码仅能使用一次</p>
-                </>
-              )}
-            </div>
+                </div>
 
-            <button
-              type="button"
-              onClick={handleActivate}
-              disabled={!ready || loading}
-              className="mt-8 w-full btn-active py-3 text-base shadow-lg shadow-primary/30 hover:shadow-primary/40 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {!ready ? "连接中..." : loading ? "激活中..." : "立即激活"}
-            </button>
+                <button
+                  type="button"
+                  onClick={handleLookup}
+                  disabled={lookupLoading}
+                  className="mt-6 w-full btn-active py-3 text-base shadow-lg shadow-primary/30 hover:shadow-primary/40 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {lookupLoading ? "查询中..." : "查询用户名"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => { setLookupMode(false); setNotice("") }}
+                  className="mt-3 w-full text-xs text-text-secondary hover:text-primary transition-colors"
+                >
+                  ← 返回重置密码
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="mt-3 space-y-1 text-xs text-text-secondary">
+                  {purpose === "reset" ? (
+                    <>
+                      <p>• 输入激活码即可重新登录并重置密码</p>
+                      <p>• 格式：6 位字母/数字，不区分大小写</p>
+                    </>
+                  ) : (
+                    <>
+                      <p>• 请从购买页面复制激活码，粘贴到上方</p>
+                      <p>• 格式：6 位字母/数字，不区分大小写</p>
+                      <p>• 每个激活码仅能使用一次</p>
+                    </>
+                  )}
+                </div>
+
+                {purpose === "reset" ? (
+                  <>
+                    <label className="mt-6 block text-sm font-semibold text-text-primary">新密码</label>
+                    <div className="mt-2 flex items-center justify-between rounded-xl border border-gray-200 px-4 py-3 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+                      <input
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        type={showPassword ? "text" : "password"}
+                        placeholder="至少 6 位"
+                        className="w-full text-sm outline-none placeholder:text-gray-400"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((v) => !v)}
+                        className="text-xs text-text-secondary hover:text-primary"
+                      >
+                        {showPassword ? "隐藏" : "显示"}
+                      </button>
+                    </div>
+
+                    <label className="mt-4 block text-sm font-semibold text-text-primary">确认密码</label>
+                    <div className="mt-2 rounded-xl border border-gray-200 px-4 py-3 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+                      <input
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        type="password"
+                        placeholder="再次输入新密码"
+                        className="w-full text-sm outline-none placeholder:text-gray-400"
+                      />
+                    </div>
+                  </>
+                ) : null}
+
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={!ready || loading}
+                  className="mt-8 w-full btn-active py-3 text-base shadow-lg shadow-primary/30 hover:shadow-primary/40 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {!ready ? "连接中..." : loading ? "处理中..." : purpose === "reset" ? "重置密码" : "立即激活"}
+                </button>
+              </>
+            )}
 
             <div className="mt-6 flex items-center gap-4 text-xs text-text-tertiary">
               <span className="h-px flex-1 bg-orange-100" />

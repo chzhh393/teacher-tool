@@ -12,6 +12,18 @@ export interface UpdateEntry {
 
 export const updates: UpdateEntry[] = [
   {
+    id: "forgot-username-lookup",
+    date: "2026-02-24",
+    version: "v1.7.5",
+    title: "忘记用户名？激活码找回",
+    summary: "登录页新增忘记用户名入口，输入激活码即可查到绑定的账号。",
+    highlights: [
+      "登录页新增「忘记用户名」链接",
+      "输入购买时的激活码，自动查回用户名",
+    ],
+    tags: ["功能"],
+  },
+  {
     id: "noise-selective-reward",
     date: "2026-02-24",
     version: "v1.7.4",

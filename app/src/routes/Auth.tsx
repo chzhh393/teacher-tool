@@ -173,6 +173,24 @@ const Auth = () => {
           </div>
 
           <div className="px-8 py-8">
+            <div className="mb-6 flex items-center justify-center gap-1 text-xs">
+              {[
+                { step: "1", label: "注册", active: tab === "register" },
+                { step: "2", label: "激活", active: false },
+                { step: "3", label: "登录", active: tab === "login" },
+              ].map((item, i) => (
+                <span key={item.step} className="flex items-center gap-1">
+                  {i > 0 && <span className="mx-1 text-gray-300">→</span>}
+                  <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-semibold ${item.active ? "bg-primary text-white" : "bg-gray-100 text-gray-400"}`}>
+                    {item.step}
+                  </span>
+                  <span className={item.active ? "font-semibold text-primary" : "text-gray-400"}>
+                    {item.label}
+                  </span>
+                </span>
+              ))}
+            </div>
+
             <label className="text-sm font-semibold text-text-primary">用户名</label>
             <div className="mt-2 rounded-xl border border-gray-200 px-4 py-3 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
               <input
@@ -285,7 +303,7 @@ const Auth = () => {
                 <div className="space-y-3">
                   <button
                     type="button"
-                    className="text-text-secondary hover:text-primary transition-colors"
+                    className="block w-full text-text-secondary hover:text-primary transition-colors"
                     onClick={() => {
                       if (typeof window !== "undefined" && username.trim()) {
                         localStorage.setItem(PENDING_USERNAME_KEY, username.trim())
@@ -294,6 +312,13 @@ const Auth = () => {
                     }}
                   >
                     忘记密码？使用激活码找回 →
+                  </button>
+                  <button
+                    type="button"
+                    className="block w-full text-text-secondary hover:text-primary transition-colors"
+                    onClick={() => navigate("/activate", { state: { purpose: "lookup" } })}
+                  >
+                    忘记用户名？使用激活码找回 →
                   </button>
                   <div className="pt-2">
                     <button type="button" className="text-primary font-semibold hover:underline" onClick={() => setTab("register")}>
