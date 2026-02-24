@@ -21,7 +21,7 @@ interface ShareItem {
   revoked: boolean
 }
 
-const DOMAIN = "https://cloud1-3g9mi825a3a27f25-1368265332.tcloudbaseapp.com"
+const DOMAIN = "https://learn-fun.cn"
 
 const formatDate = (iso: string) => {
   try {

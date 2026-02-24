@@ -120,7 +120,7 @@ const Store = () => {
       ) : null}
 
       {tab === "items" ? (
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {items.map((item) => (
             <div key={item.id} className="card p-5 border border-gray-100">
               <div className="flex items-center justify-between">
