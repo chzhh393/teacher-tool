@@ -200,6 +200,33 @@ const user = (result.data || []).map(row => unwrap(row))[0]
 
 ---
 
+### 2.4 按条件查询时必须在数据库端过滤，不能全表扫描后内存过滤
+
+**级别**：🔴 致命
+
+即使加了 `.limit(1000)`，全表 `.get()` + JS `.filter()` 仍有隐患：当数据总量超过 limit 时，目标数据可能不在前 1000 条中，导致查询结果为空。
+
+**检查项**：
+
+- [ ] 按 classId、userId 等条件查询时，必须在 `.where()` 中过滤，不能先取全部再内存过滤
+- [ ] 特别注意：全表数据量会随用户增长持续膨胀，即使当前未超限也要提前防范
+
+```javascript
+// ❌ 错误：全表扫描后内存过滤，数据超过 1000 条时目标数据可能被截断
+const result = await db.collection("TT_shop_items").limit(1000).get()
+const items = allItems.filter((item) => item.classId === classId)
+
+// ✅ 正确：数据库端按条件查询
+const _ = db.command
+const result = await db.collection("TT_shop_items")
+  .where(_.or([{ classId }, { "data.classId": classId }]))
+  .limit(1000).get()
+```
+
+**历史案例**：`TT_shop_list` 用 `limit(1000).get()` 取全部商品再按 classId 过滤。商品总量达 2036 条后，部分班级的商品排在 1000 名之后被截断，`shopList` 返回空数组。设置页误判为新班级并自动写入默认商品，每次进入都重复创建，累积产生大量重复数据（8 条变 112 条）。
+
+---
+
 ## 三、数值边界
 
 ### 3.1 积分/等级封顶
@@ -698,6 +725,7 @@ CloudBase 数据库不会在 `.add()` 时自动创建集合。如果目标集合
 | `.add()` 不要存储返回值（v1.x） | 🔴 | 存变量会导致文档静默不写入 |
 | `.get()` 前加 `.limit()` | 🔴 | 默认只返回 100 条 |
 | 不要全表扫描+JS过滤 | 🔴 | 用 `.where()` 在数据库端过滤 |
+| 按条件查必须用 `.where()`，不能全表+内存过滤 | 🔴 | 数据超 limit 时目标被截断返回空 |
 | 加分封顶、扣分兜底 | 🔴 | 防止数值溢出 |
 | 前后端默认值一致 | 🔴 | 不然行为不一致 |
 | 库存用 `_.inc()` 原子操作 | 🔴 | 防止并发超卖 |

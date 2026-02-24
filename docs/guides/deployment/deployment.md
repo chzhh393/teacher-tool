@@ -73,13 +73,13 @@ tcb hosting deploy "app/dist" / -e cloud1-3g9mi825a3a27f25
 部署完成后，访问地址：
 
 ```
-https://cloud1-3g9mi825a3a27f25-1368265332.tcloudbaseapp.com/
+https://learn-fun.cn/
 ```
 
 建议带缓存刷新参数：
 
 ```
-https://cloud1-3g9mi825a3a27f25-1368265332.tcloudbaseapp.com/?v=YYYYMMDD-xxxx
+https://learn-fun.cn/?v=YYYYMMDD-xxxx
 ```
 
 ## 5. 部署云函数

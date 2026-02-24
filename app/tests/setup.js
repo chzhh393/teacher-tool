@@ -1,6 +1,21 @@
 import Module from "node:module"
 import { EventEmitter } from "node:events"
 
+globalThis.__mockConfig = {
+  strict: true,
+  defaultLimit: 100,
+  requireWhere: true,
+  requireLimit: true,
+  allowFullScanCollections: [
+    "TT_activation_codes",
+    "TT_users",
+    "TT_classes",
+    "TT_students",
+    "TT_sessions",
+    "TT_shop_items",
+  ],
+}
+
 const originalRequire = Module.prototype.require
 
 Module.prototype.require = function patchedRequire(id, ...rest) {

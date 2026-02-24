@@ -54,6 +54,9 @@ describe("TT_score_batch", () => {
     })
 
     expect(result.updatedStudentIds).toEqual(["stu-1"])
+    expect(result.recordIds).toHaveLength(1)
+    expect(typeof result.recordIds[0]).toBe("string")
+    expect(result.recordIds[0].length).toBe(32)
 
     const students = globalThis.__mockDb.__getCollection("TT_students")
     const student = students.find((doc) => doc._id === "stu-1")
@@ -63,6 +66,7 @@ describe("TT_score_batch", () => {
 
     const records = globalThis.__mockDb.__getCollection("TT_score_records")
     expect(records.length).toBe(1)
+    expect(records[0]._id).toBe(result.recordIds[0])
     expect(records[0].data.studentId).toBe("stu-1")
     expect(records[0].data.type).toBe("add")
   })

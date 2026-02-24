@@ -121,29 +121,26 @@ python3 test.py
 | 成年 | 4 | unicorn_4_adult.png |
 | 究极 | 5 | unicorn_5_ultimate.png |
 
-## 幻兽ID列表
+## 幻兽ID列表（共 4 系列 66 只）
 
-### 梦幻系 (Dreamy Series)
+### 梦幻系 (Dreamy Series) — 13 只
 
 | 中文名 | ID |
 |--------|-----|
 | 独角兽 | unicorn |
-| 精灵龙 | fairy_dragon |
-| 月兔 | moon_rabbit |
-| 凤凰 | phoenix |
-| 水精灵 | water_spirit |
-| 花仙子 | flower_fairy |
-| 星光鹿 | star_deer |
-| 云羊 | cloud_sheep |
-| 彩虹蛇 | rainbow_snake |
-| 梦境蝶 | dream_butterfly |
-| 晨露狐 | dawn_fox |
-| 珍珠龟 | pearl_turtle |
+| 仙女龙 | fairy_dragon |
+| 彩虹飞马 | pegasus |
+| 冰雪狐 | snow_fox |
+| 珍珠人鱼 | mermaid |
+| 花仙子 | flower_spirit |
 | 糖果熊 | candy_bear |
-| 魔法猫 | magic_cat |
-| 水晶蜗牛 | crystal_snail |
+| 治愈羊 | angel_sheep |
+| 宝石鸟 | gem_bird |
+| 幸运龙 | clover_dragon |
+| 梦幻水母 | jellyfish |
+| 甜心狐 | dessert_fox |
 
-### 热血系 (Hot-Blooded Series)
+### 热血系 (Hot-Blooded Series) — 13 只
 
 | 中文名 | ID |
 |--------|-----|
@@ -153,15 +150,59 @@ python3 test.py
 | 火焰狮 | flame_lion |
 | 暗影豹 | shadow_leopard |
 | 地狱犬 | cerberus |
-| 狮鹫 | griffin |
 | 深海巨鲨 | mecha_shark |
-| 玄武 | rock_tortoise |
 | 剑齿虎 | saber_tooth |
 | 熔岩怪 | lava_golem |
 | 机械甲虫 | mecha_beetle |
 | 幽灵龙 | ghost_dragon |
 | 冰原猛犸 | ice_mammoth |
 | 功夫熊猫 | kungfu_panda |
+
+### 星辰系 (Cosmic Series) — 20 只
+
+| 中文名 | ID | 来源 |
+|--------|-----|------|
+| 星空猫 | starry_cat | 原梦幻系 |
+| 月兔 | moon_rabbit | 原梦幻系 |
+| 极光鹿 | aurora_elk | 原梦幻系 |
+| 星云水獭 | nebula_otter | 新增 |
+| 月神猫头鹰 | lunar_owl | 新增 |
+| 黑洞蛙 | void_frog | 新增 |
+| 极光海豚 | aurora_dolphin | 新增 |
+| 脉冲蜂鸟 | pulsar_hummingbird | 新增 |
+| 土星章鱼 | saturn_octopus | 新增 |
+| 彗星松鼠 | comet_squirrel | 新增 |
+| 暗物质蝎 | dark_scorpion | 新增 |
+| 超新星孔雀 | supernova_peacock | 新增 |
+| 流星刺猬 | meteor_hedgehog | 新增 |
+| 银河鲸 | galaxy_whale | 新增 |
+| 量子变色龙 | quantum_chameleon | 新增 |
+| 日冕螳螂 | corona_mantis | 新增 |
+| 星尘萤火虫 | stardust_firefly | 新增 |
+| 虫洞穿山甲 | wormhole_pangolin | 新增 |
+
+### 山海系 (Mythology Series) — 20 只
+
+| 中文名 | ID | 来源 |
+|--------|-----|------|
+| 九色鹿 | nine_deer | 原梦幻系 |
+| 狮鹫 | griffin | 原热血系 |
+| 玄武 | rock_tortoise | 原热血系 |
+| 白泽 | baize | 新增 |
+| 鲲鹏 | kunpeng | 新增 |
+| 九尾狐 | ninetail_fox | 新增 |
+| 麒麟 | qilin | 新增 |
+| 饕餮 | taotie | 新增 |
+| 貔貅 | pixiu | 新增 |
+| 青鸾 | azure_luan | 新增 |
+| 应龙 | yinglong | 新增 |
+| 当康 | dangkang | 新增 |
+| 毕方 | bifang | 新增 |
+| 混沌 | hundun | 新增 |
+| 英招 | yingzhao | 新增 |
+| 陆吾 | luwu | 新增 |
+| 帝江 | dijiang | 新增 |
+| 白矖 | baixi | 新增 |
 
 ## API 参数说明
 

@@ -35,11 +35,11 @@ SECRET_ACCESS_KEY = os.getenv("VOLC_SECRET_ACCESS_KEY", "")
 PROMPT_PREFIX = "3D cute cartoon style, blind box toy style, C4D render, clean white background, high quality, 8k, "
 PROMPT_SUFFIX = " --no multiple views, no split screen, no text, no human"
 
-# 测试用的提示词 - 功夫熊猫究极
-TEST_PROMPT = "One single Ultimate Kungfu Panda Dragon Warrior God Form, solo, massive divine panda floating in meditation pose, mature serene powerful expression not cute, god-like martial arts presence, colossal body radiating pure golden chi with brilliant blinding constellation patterns, wise ancient piercing eyes with cosmic yin-yang symbols, wearing divine dragon emperor armor with jade crown, golden dragon spirit coiling around body, massive chi explosion creating universe balance, divine martial arts god aura, god-like majestic and enlightened presence, mature and transcendent, low angle epic shot, white background"
+# 测试用的提示词
+TEST_PROMPT = "One single Ultimate Taotie Eternal Hunger God, solo, massive divine beast, mature serene powerful expression not cute, god-like devouring presence, colossal body with the classic taotie face pattern across entire form, jaws capable of consuming worlds, ancient bronze divine armor, gravitational pull drawing everything inward, insatiable cosmic hunger embodied, ancient Chinese mythological style, god-like majestic and enlightened presence, mature and transcendent, low angle epic shot, white background"
 
 # 输出文件名
-OUTPUT_FILENAME = "kungfu_panda_5_ultimate.png"
+OUTPUT_FILENAME = "taotie_5_ultimate.png"
 
 # ============ 主逻辑 ============
 

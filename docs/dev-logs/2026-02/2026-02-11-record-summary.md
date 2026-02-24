@@ -97,14 +97,29 @@
 - 加载中显示 loading 状态
 - 无记录显示空状态提示
 
+## 遇到的问题
+
+### 1. CloudBase Date 类型查询不匹配（关键 bug）
+- **现象**：概览统计全部显示 0，时间范围查询命中 0 条记录
+- **根因**：`TT_score_records` 的 `createdAt` 存储为 CloudBase Date 对象 `{$date: 1770309992593}`，而查询用纯数字时间戳 `_.gte(1739145600000)` 做比较，类型不匹配
+- **修复**：改为 `_.gte(new Date(ts)).lte(new Date(ts))`，用 Date 对象和 Date 对象比较
+
+### 2. CloudBase admin SDK 单次查询上限 1000 条
+- **现象**：`.limit(10000)` 实际被静默截断为 1000 条，月度数据可能不完整
+- **修复**：改为 while 循环分批拉取，每次 1000 条，直到 `rows.length < batchSize`
+
+### 3. 首次切换 tab 双重请求
+- **现象**：`handleTabChange` 手动调 `fetchSummary()` + `useEffect` 监听 `activeTab` 变化也调 `fetchSummary()`
+- **修复**：去掉 `handleTabChange` 中的手动调用，完全依赖 useEffect
+
 ## 技术要点与注意事项
 
 1. **双路径查询**：所有 `.where()` 必须用 `_.or([{ field }, { "data.field": value }])`
 2. **数据解包**：`const raw = item.data || item`
-3. **显式 limit**：`.limit(10000)` 不依赖默认 100 条
+3. **查询上限**：CloudBase admin SDK 单次最多 1000 条，超过需分批拉取
 4. **排除撤回**：过滤 `revoked !== true && type !== "revoke"`
-5. **时间戳比较**：用原始数值，不用格式化后的字符串
-6. **时区统一**：Asia/Shanghai
+5. **Date 类型比较**：`createdAt` 是 `{$date}` 对象，查询必须传 `new Date()`，不能传纯数字
+6. **时区统一**：Asia/Shanghai，时间范围用 UTC+8 偏移量手动计算
 
 ## 修改文件清单
 

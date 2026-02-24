@@ -73,15 +73,19 @@ class MockQuery {
     this._limit = null
     this._skip = 0
     this._orderBy = null
+    this._hasWhere = Boolean(condition)
+    this._hasLimit = false
   }
 
   where(condition) {
     this.condition = condition
+    this._hasWhere = true
     return this
   }
 
   limit(value) {
     this._limit = value
+    this._hasLimit = true
     return this
   }
 
@@ -93,6 +97,19 @@ class MockQuery {
   orderBy(field, direction = "asc") {
     this._orderBy = { field, direction }
     return this
+  }
+
+  _enforce(op) {
+    const config = this.collection._config || {}
+    const allowFullScan = (config.allowFullScanCollections || []).includes(this.collection.name)
+    const allowNoLimit = (config.allowNoLimitCollections || []).includes(this.collection.name)
+    if (config.requireWhere && !this._hasWhere && !allowFullScan) {
+      throw new Error(`MockDB strict: missing where() on ${this.collection.name}.${op}`)
+    }
+    const requireLimitForOp = config.requireLimit && op !== "count" && op !== "remove"
+    if (requireLimitForOp && !this._hasLimit && !allowNoLimit) {
+      throw new Error(`MockDB strict: missing limit() on ${this.collection.name}.${op}`)
+    }
   }
 
   _apply() {
@@ -110,19 +127,26 @@ class MockQuery {
       })
     }
     if (this._skip) rows = rows.slice(this._skip)
-    if (typeof this._limit === "number") rows = rows.slice(0, this._limit)
+    if (typeof this._limit === "number") {
+      rows = rows.slice(0, this._limit)
+    } else if (typeof this.collection._config.defaultLimit === "number") {
+      rows = rows.slice(0, this.collection._config.defaultLimit)
+    }
     return rows
   }
 
   async get() {
+    this._enforce("get")
     return { data: this._apply() }
   }
 
   async count() {
+    this._enforce("count")
     return { total: this.collection._store.docs.filter((doc) => matches(doc, this.condition)).length }
   }
 
   async remove() {
+    this._enforce("remove")
     const docs = this.collection._store.docs
     const before = docs.length
     const remaining = docs.filter((doc) => !matches(doc, this.condition))
@@ -190,6 +214,7 @@ class MockCollection {
   constructor(name, store) {
     this.name = name
     this._store = store
+    this._config = store.config || {}
   }
 
   where(condition) {
@@ -209,7 +234,8 @@ class MockCollection {
   }
 
   async get() {
-    return { data: this._store.docs }
+    const query = new MockQuery(this, null)
+    return query.get()
   }
 
   doc(id) {
@@ -227,11 +253,20 @@ class MockCollection {
 export const createMockDb = (seed = {}) => {
   const collections = new Map()
   const command = makeCommand()
+  const globalConfig = globalThis.__mockConfig || {}
+  const strict = globalConfig.strict === true
+  const config = {
+    defaultLimit: typeof globalConfig.defaultLimit === "number" ? globalConfig.defaultLimit : 100,
+    requireWhere: strict ? globalConfig.requireWhere !== false : Boolean(globalConfig.requireWhere),
+    requireLimit: strict ? globalConfig.requireLimit !== false : Boolean(globalConfig.requireLimit),
+    allowFullScanCollections: globalConfig.allowFullScanCollections || [],
+    allowNoLimitCollections: globalConfig.allowNoLimitCollections || [],
+  }
 
   const load = (name) => {
     if (!collections.has(name)) {
       const docs = (seed[name] || []).map((doc, idx) => normalizeDoc(doc, `${name}-${idx + 1}`))
-      collections.set(name, { docs })
+      collections.set(name, { docs, config })
     }
     return collections.get(name)
   }
