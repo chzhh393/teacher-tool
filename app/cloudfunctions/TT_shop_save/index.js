@@ -3,12 +3,13 @@ const tcb = require("tcb-admin-node")
 // 验证 token 并返回用户信息
 const verifyToken = async (db, token) => {
   if (!token) return null
-  let result = await db.collection("TT_sessions").where({ token }).limit(1).get()
-  let session = (result.data || [])[0]
-  if (!session) {
-    result = await db.collection("TT_sessions").where({ "data.token": token }).limit(1).get()
-    session = (result.data || [])[0]
-  }
+  const _ = db.command
+  const result = await db
+    .collection("TT_sessions")
+    .where(_.or([{ token }, { "data.token": token }]))
+    .limit(1)
+    .get()
+  const session = (result.data || [])[0]
   if (!session) return null
   const raw = session.data || session
   if (raw.expiredAt && new Date(raw.expiredAt).getTime() < Date.now()) return null
@@ -56,13 +57,15 @@ exports.main = async (event = {}) => {
   const now = new Date()
 
   // 获取该班级的现有商品
-  const result = await db.collection("TT_shop_items").limit(1000).get()
+  const _ = db.command
+  const result = await db.collection("TT_shop_items").where(
+    _.or([{ classId }, { "data.classId": classId }])
+  ).limit(1000).get()
   const existing = (result.data || [])
     .map((doc) => {
       const d = doc.data || doc
       return { _id: doc._id, classId: d.classId }
     })
-    .filter((doc) => doc.classId === classId)
 
   const existingIds = new Set(existing.map((doc) => doc._id))
   const newIds = new Set(items.map((item) => item.id))

@@ -1,17 +1,18 @@
 const tcb = require("tcb-admin-node")
 const crypto = require("crypto")
 
-const SHARE_DOMAIN = "https://cloud1-3g9mi825a3a27f25-1368265332.tcloudbaseapp.com"
+const SHARE_DOMAIN = "https://learn-fun.cn"
 const DEFAULT_EXPIRE_DAYS = 30
 
 const verifyToken = async (db, token) => {
   if (!token) return null
-  let result = await db.collection("TT_sessions").where({ token }).limit(1).get()
-  let session = (result.data || [])[0]
-  if (!session) {
-    result = await db.collection("TT_sessions").where({ "data.token": token }).limit(1).get()
-    session = (result.data || [])[0]
-  }
+  const _ = db.command
+  const result = await db
+    .collection("TT_sessions")
+    .where(_.or([{ token }, { "data.token": token }]))
+    .limit(1)
+    .get()
+  const session = (result.data || [])[0]
   if (!session) return null
   const raw = session.data || session
   if (raw.expiredAt && new Date(raw.expiredAt).getTime() < Date.now()) return null

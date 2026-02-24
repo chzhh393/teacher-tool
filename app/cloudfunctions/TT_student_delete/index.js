@@ -3,12 +3,13 @@ const tcb = require("tcb-admin-node")
 // 验证 token 并返回用户信息
 const verifyToken = async (db, token) => {
   if (!token) return null
-  let result = await db.collection("TT_sessions").where({ token }).limit(1).get()
-  let session = (result.data || [])[0]
-  if (!session) {
-    result = await db.collection("TT_sessions").where({ "data.token": token }).limit(1).get()
-    session = (result.data || [])[0]
-  }
+  const _ = db.command
+  const result = await db
+    .collection("TT_sessions")
+    .where(_.or([{ token }, { "data.token": token }]))
+    .limit(1)
+    .get()
+  const session = (result.data || [])[0]
   if (!session) return null
   const raw = session.data || session
   if (raw.expiredAt && new Date(raw.expiredAt).getTime() < Date.now()) return null

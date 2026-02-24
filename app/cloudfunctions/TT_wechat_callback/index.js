@@ -32,15 +32,16 @@ exports.main = async (event = {}) => {
 
   const app = tcb.init({ env: tcb.SYMBOL_CURRENT_ENV })
   const db = app.database()
+  const _ = db.command
   const now = new Date()
 
   // 1. 验证 state
-  let stateResult = await db.collection("TT_wechat_states").where({ state }).limit(1).get()
-  let stateRow = (stateResult.data || [])[0]
-  if (!stateRow) {
-    stateResult = await db.collection("TT_wechat_states").where({ "data.state": state }).limit(1).get()
-    stateRow = (stateResult.data || [])[0]
-  }
+  const stateResult = await db
+    .collection("TT_wechat_states")
+    .where(_.or([{ state }, { "data.state": state }]))
+    .limit(1)
+    .get()
+  const stateRow = (stateResult.data || [])[0]
   if (!stateRow) {
     throw new Error("无效的授权请求")
   }

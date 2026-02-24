@@ -3,12 +3,13 @@ const tcb = require("tcb-admin-node")
 const unwrap = (row) => (row?.data ? row.data : row)
 
 const findSession = async (db, token) => {
-  let result = await db.collection("TT_sessions").where({ token }).limit(1).get()
-  let session = (result.data || [])[0]
-  if (!session) {
-    result = await db.collection("TT_sessions").where({ "data.token": token }).limit(1).get()
-    session = (result.data || [])[0]
-  }
+  const _ = db.command
+  const result = await db
+    .collection("TT_sessions")
+    .where(_.or([{ token }, { "data.token": token }]))
+    .limit(1)
+    .get()
+  const session = (result.data || [])[0]
   return session
 }
 

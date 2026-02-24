@@ -2,14 +2,13 @@ const tcb = require("tcb-admin-node")
 
 const verifyToken = async (db, token) => {
   if (!token) return null
-  // 尝试根级别查询
-  let result = await db.collection("TT_sessions").where({ token }).get()
-  let session = (result.data || [])[0]
-  // 如果没找到，尝试嵌套查询
-  if (!session) {
-    result = await db.collection("TT_sessions").where({ "data.token": token }).get()
-    session = (result.data || [])[0]
-  }
+  const _ = db.command
+  const result = await db
+    .collection("TT_sessions")
+    .where(_.or([{ token }, { "data.token": token }]))
+    .limit(1)
+    .get()
+  const session = (result.data || [])[0]
   if (!session) return null
   const raw = session.data || session
   if (new Date(raw.expiredAt) < new Date()) return null

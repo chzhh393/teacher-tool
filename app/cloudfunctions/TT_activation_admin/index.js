@@ -4,7 +4,6 @@ const CODE_REG = /^[A-Z0-9]{6}$/
 const CODE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 const MAX_PAGE_SIZE = 100
 const MAX_GENERATE = 200
-const MAX_SCAN = 2000
 
 const unwrap = (row) => (row?.data ? row.data : row)
 
@@ -39,8 +38,17 @@ const getDeviceCount = (row) => {
 }
 
 const listAll = async (collection) => {
-  const result = await collection.limit(MAX_SCAN).get()
-  return (result.data || []).map(formatRow).filter(Boolean)
+  const BATCH = 1000
+  let all = []
+  let offset = 0
+  while (true) {
+    const result = await collection.skip(offset).limit(BATCH).get()
+    const batch = (result.data || []).map(formatRow).filter(Boolean)
+    all = all.concat(batch)
+    if (batch.length < BATCH) break
+    offset += BATCH
+  }
+  return all
 }
 
 exports.main = async (event = {}) => {
@@ -71,36 +79,47 @@ exports.main = async (event = {}) => {
     const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, Number(event.pageSize) || 20))
     const skip = (page - 1) * pageSize
     const status = String(event.status || "")
-    const keyword = String(event.search || "").toLowerCase().trim()
+    const keyword = String(event.search || "").toUpperCase().trim()
 
-    const allRecords = await listAll(collection)
+    const _ = db.command
 
-    // 1. 关键词过滤
-    const searched = keyword
-      ? allRecords.filter((item) => {
-          const code = String(item.code || "").toLowerCase()
-          const batch = String(item.batchName || item.batch_name || "").toLowerCase()
-          return code.includes(keyword) || batch.includes(keyword)
-        })
-      : allRecords
+    // 1. 构建数据库查询条件
+    const conditions = []
 
-    // 2. 状态过滤
-    const filtered = searched.filter((item) => {
-      if (status === "used") return item.used === true
-      if (status === "unused") return !item.used && !item.revoked
-      if (status === "revoked") return item.revoked === true
-      return true
-    })
+    if (keyword) {
+      // 激活码精确匹配（支持部分输入时按前缀匹配）
+      conditions.push(_.or([
+        { code: keyword },
+        { "data.code": keyword },
+        { batchName: keyword },
+        { "data.batchName": keyword },
+      ]))
+    }
 
-    // 3. 按创建时间降序排序
-    filtered.sort((a, b) => {
-      const ta = new Date(a.createdAt || 0).getTime()
-      const tb = new Date(b.createdAt || 0).getTime()
-      return tb - ta
-    })
+    if (status === "used") {
+      conditions.push(_.or([{ used: true }, { "data.used": true }]))
+    } else if (status === "unused") {
+      conditions.push(_.or([{ used: _.neq(true) }, { "data.used": _.neq(true) }]))
+      conditions.push(_.or([{ revoked: _.neq(true) }, { "data.revoked": _.neq(true) }]))
+    } else if (status === "revoked") {
+      conditions.push(_.or([{ revoked: true }, { "data.revoked": true }]))
+    }
 
-    const total = filtered.length
-    const records = filtered.slice(skip, skip + pageSize)
+    // 2. 执行查询
+    let query = conditions.length > 0
+      ? collection.where(_.and(conditions))
+      : collection
+
+    const countResult = await query.count()
+    const total = countResult.total || 0
+
+    const result = await query
+      .orderBy("createdAt", "desc")
+      .skip(skip)
+      .limit(pageSize)
+      .get()
+
+    const records = (result.data || []).map(formatRow).filter(Boolean)
 
     return {
       records,

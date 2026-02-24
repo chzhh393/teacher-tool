@@ -2,17 +2,18 @@ const tcb = require("tcb-admin-node")
 const crypto = require("crypto")
 
 const WECHAT_APP_ID = "wxc0d50d63443ddd8a"
-const REDIRECT_URI = "https://cloud1-3g9mi825a3a27f25-1368265332.tcloudbaseapp.com/"
+const REDIRECT_URI = "https://learn-fun.cn/"
 
 const unwrap = (row) => (row?.data ? row.data : row)
 
 const findSession = async (db, token) => {
-  let result = await db.collection("TT_sessions").where({ token }).limit(1).get()
-  let session = (result.data || [])[0]
-  if (!session) {
-    result = await db.collection("TT_sessions").where({ "data.token": token }).limit(1).get()
-    session = (result.data || [])[0]
-  }
+  const _ = db.command
+  const result = await db
+    .collection("TT_sessions")
+    .where(_.or([{ token }, { "data.token": token }]))
+    .limit(1)
+    .get()
+  const session = (result.data || [])[0]
   return session ? unwrap(session) : null
 }
 

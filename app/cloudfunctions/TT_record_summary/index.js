@@ -2,12 +2,13 @@ const tcb = require("tcb-admin-node")
 
 const verifyToken = async (db, token) => {
   if (!token) return null
-  let result = await db.collection("TT_sessions").where({ token }).limit(1).get()
-  let session = (result.data || [])[0]
-  if (!session) {
-    result = await db.collection("TT_sessions").where({ "data.token": token }).limit(1).get()
-    session = (result.data || [])[0]
-  }
+  const _ = db.command
+  const result = await db
+    .collection("TT_sessions")
+    .where(_.or([{ token }, { "data.token": token }]))
+    .limit(1)
+    .get()
+  const session = (result.data || [])[0]
   if (!session) return null
   const raw = session.data || session
   if (raw.expiredAt && new Date(raw.expiredAt).getTime() < Date.now()) return null
@@ -110,9 +111,12 @@ exports.main = async (event = {}) => {
   //    时间条件需要双路径兼容
   //    CloudBase admin SDK 单次最多返回 1000 条，需分批拉取
   const classCondition = _.or([{ classId }, { "data.classId": classId }])
+  // createdAt 存储为 CloudBase Date 对象 {$date: timestamp}，必须用 Date 对象比较
+  const startDate = new Date(timeRange.startTimestamp)
+  const endDate = new Date(timeRange.endTimestamp)
   const timeCondition = _.or([
-    { createdAt: _.gte(timeRange.startTimestamp).lte(timeRange.endTimestamp) },
-    { "data.createdAt": _.gte(timeRange.startTimestamp).lte(timeRange.endTimestamp) },
+    { createdAt: _.gte(startDate).lte(endDate) },
+    { "data.createdAt": _.gte(startDate).lte(endDate) },
   ])
   const condition = _.and([classCondition, timeCondition])
 

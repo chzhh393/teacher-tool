@@ -1,15 +1,19 @@
 const tcb = require("tcb-admin-node")
+const crypto = require("crypto")
 
 const DEFAULT_THRESHOLDS = [0, 5, 12, 22, 35, 50, 70, 95, 125, 160]
 
+const generateId = () => crypto.randomBytes(16).toString("hex")
+
 const verifyToken = async (db, token) => {
   if (!token) return null
-  let result = await db.collection("TT_sessions").where({ token }).limit(1).get()
-  let session = (result.data || [])[0]
-  if (!session) {
-    result = await db.collection("TT_sessions").where({ "data.token": token }).limit(1).get()
-    session = (result.data || [])[0]
-  }
+  const _ = db.command
+  const result = await db
+    .collection("TT_sessions")
+    .where(_.or([{ token }, { "data.token": token }]))
+    .limit(1)
+    .get()
+  const session = (result.data || [])[0]
   if (!session) return null
   const raw = session.data || session
   if (raw.expiredAt && new Date(raw.expiredAt).getTime() < Date.now()) return null
@@ -92,10 +96,12 @@ exports.main = async (event = {}) => {
   const studentsResult = await db
     .collection("TT_students")
     .where({ _id: _.in(studentIds) })
+    .limit(Math.min(1000, studentIds.length))
     .get()
 
   const students = studentsResult.data ?? []
   const updatedIds = []
+  const recordIds = []
 
   for (const student of students) {
     const raw = student.data || student
@@ -131,7 +137,9 @@ exports.main = async (event = {}) => {
 
     await db.collection("TT_students").doc(student._id).set({ data: updated })
 
-    await db.collection("TT_score_records").add({
+    // 自行生成 ID + doc().set() 替代 .add()，规避 tcb-admin-node v1.x .add() 返回值 bug
+    const recordId = generateId()
+    await db.collection("TT_score_records").doc(recordId).set({
       data: {
         classId,
         studentId: student._id,
@@ -146,10 +154,12 @@ exports.main = async (event = {}) => {
       },
     })
 
+    recordIds.push(recordId)
     updatedIds.push(student._id)
   }
 
   return {
     updatedStudentIds: updatedIds,
+    recordIds,
   }
 }
