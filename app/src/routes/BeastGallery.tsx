@@ -13,10 +13,12 @@ const STAGES: { key: EvolutionStage; label: string }[] = [
 const SERIES_MAP = {
   dreamy: { label: "梦幻系", color: "bg-pink-100 text-pink-700" },
   "hot-blooded": { label: "热血系", color: "bg-red-100 text-red-700" },
+  cosmic: { label: "星辰系", color: "bg-indigo-100 text-indigo-700" },
+  mythology: { label: "山海系", color: "bg-amber-100 text-amber-700" },
 }
 
 const BeastGallery = () => {
-  const [seriesFilter, setSeriesFilter] = useState<"" | "dreamy" | "hot-blooded">("")
+  const [seriesFilter, setSeriesFilter] = useState<"" | "dreamy" | "hot-blooded" | "cosmic" | "mythology">("")
   const [stageFilter, setStageFilter] = useState<"" | EvolutionStage>("")
   const [search, setSearch] = useState("")
 
@@ -34,6 +36,8 @@ const BeastGallery = () => {
 
   const dreamyCount = beasts.filter((b) => b.series === "dreamy").length
   const hotBloodedCount = beasts.filter((b) => b.series === "hot-blooded").length
+  const cosmicCount = beasts.filter((b) => b.series === "cosmic").length
+  const mythologyCount = beasts.filter((b) => b.series === "mythology").length
 
   return (
     <div className="space-y-6">
@@ -46,7 +50,7 @@ const BeastGallery = () => {
         </div>
       </header>
 
-      <section className="grid gap-4 sm:grid-cols-3">
+      <section className="grid gap-4 sm:grid-cols-5">
         <div className="card p-5">
           <p className="text-xs text-text-secondary">总幻兽数</p>
           <p className="mt-2 text-2xl font-bold text-text-primary">{beasts.length}</p>
@@ -58,6 +62,14 @@ const BeastGallery = () => {
         <div className="card p-5">
           <p className="text-xs text-text-secondary">热血系</p>
           <p className="mt-2 text-2xl font-bold text-red-600">{hotBloodedCount}</p>
+        </div>
+        <div className="card p-5">
+          <p className="text-xs text-text-secondary">星辰系</p>
+          <p className="mt-2 text-2xl font-bold text-indigo-600">{cosmicCount}</p>
+        </div>
+        <div className="card p-5">
+          <p className="text-xs text-text-secondary">山海系</p>
+          <p className="mt-2 text-2xl font-bold text-amber-600">{mythologyCount}</p>
         </div>
       </section>
 
@@ -89,6 +101,8 @@ const BeastGallery = () => {
               <option value="">全部系列</option>
               <option value="dreamy">梦幻系</option>
               <option value="hot-blooded">热血系</option>
+              <option value="cosmic">星辰系</option>
+              <option value="mythology">山海系</option>
             </select>
           </div>
         </div>

@@ -4,7 +4,7 @@ export interface Beast {
     id: string;
     name: string;
     englishName: string;
-    series: 'dreamy' | 'hot-blooded';
+    series: 'dreamy' | 'hot-blooded' | 'cosmic' | 'mythology';
     description: string;
     images: {
         [key in EvolutionStage]: string;
@@ -44,7 +44,7 @@ export const beasts: Beast[] = [
         id: 'starry-cat',
         name: '星空猫',
         englishName: 'Starry Cat',
-        series: 'dreamy',
+        series: 'cosmic',
         description: '幻兽学院的星空猫伙伴',
         images: {
             egg: '/beasts/starry_cat_1_egg.webp',
@@ -58,7 +58,7 @@ export const beasts: Beast[] = [
         id: 'moon-rabbit',
         name: '月兔',
         englishName: 'Moon Rabbit',
-        series: 'dreamy',
+        series: 'cosmic',
         description: '幻兽学院的月兔伙伴',
         images: {
             egg: '/beasts/moon_rabbit_1_egg.webp',
@@ -86,7 +86,7 @@ export const beasts: Beast[] = [
         id: 'nine-deer',
         name: '九色鹿',
         englishName: 'Nine-colored Deer',
-        series: 'dreamy',
+        series: 'mythology',
         description: '幻兽学院的九色鹿伙伴',
         images: {
             egg: '/beasts/nine_deer_1_egg.webp',
@@ -212,7 +212,7 @@ export const beasts: Beast[] = [
         id: 'aurora-elk',
         name: '极光鹿',
         englishName: 'Aurora Elk',
-        series: 'dreamy',
+        series: 'cosmic',
         description: '幻兽学院的极光鹿伙伴',
         images: {
             egg: '/beasts/aurora_elk_1_egg.webp',
@@ -324,7 +324,7 @@ export const beasts: Beast[] = [
         id: 'griffin',
         name: '狮鹫',
         englishName: 'Griffin',
-        series: 'hot-blooded',
+        series: 'mythology',
         description: '幻兽学院的狮鹫伙伴',
         images: {
             egg: '/beasts/griffin_1_egg.webp',
@@ -352,7 +352,7 @@ export const beasts: Beast[] = [
         id: 'rock-tortoise',
         name: '玄武',
         englishName: 'Rock Tortoise',
-        series: 'hot-blooded',
+        series: 'mythology',
         description: '幻兽学院的玄武伙伴',
         images: {
             egg: '/beasts/rock_tortoise_1_egg.webp',
@@ -444,6 +444,62 @@ export const beasts: Beast[] = [
             juvenile: '/beasts/kungfu_panda_3_juvenile.webp',
             adult: '/beasts/kungfu_panda_4_adult.webp',
             ultimate: '/beasts/kungfu_panda_5_ultimate.webp',
+        },
+    },
+    {
+        id: 'nebula-otter',
+        name: '星云水獭',
+        englishName: 'Nebula Otter',
+        series: 'cosmic',
+        description: '幻兽学院的星云水獭伙伴',
+        images: {
+            egg: '/beasts/nebula_otter_1_egg.png',
+            baby: '/beasts/nebula_otter_2_baby.png',
+            juvenile: '/beasts/nebula_otter_3_juvenile.png',
+            adult: '/beasts/nebula_otter_4_adult.png',
+            ultimate: '/beasts/nebula_otter_5_ultimate.png',
+        },
+    },
+    {
+        id: 'galaxy-whale',
+        name: '银河鲸',
+        englishName: 'Galaxy Whale',
+        series: 'cosmic',
+        description: '幻兽学院的银河鲸伙伴',
+        images: {
+            egg: '/beasts/galaxy_whale_1_egg.png',
+            baby: '/beasts/galaxy_whale_2_baby.png',
+            juvenile: '/beasts/galaxy_whale_3_juvenile.png',
+            adult: '/beasts/galaxy_whale_4_adult.png',
+            ultimate: '/beasts/galaxy_whale_5_ultimate.png',
+        },
+    },
+    {
+        id: 'qilin',
+        name: '麒麟',
+        englishName: 'Qilin',
+        series: 'mythology',
+        description: '幻兽学院的麒麟伙伴',
+        images: {
+            egg: '/beasts/qilin_1_egg.png',
+            baby: '/beasts/qilin_2_baby.png',
+            juvenile: '/beasts/qilin_3_juvenile.png',
+            adult: '/beasts/qilin_4_adult.png',
+            ultimate: '/beasts/qilin_5_ultimate.png',
+        },
+    },
+    {
+        id: 'taotie',
+        name: '饕餮',
+        englishName: 'Taotie',
+        series: 'mythology',
+        description: '幻兽学院的饕餮伙伴',
+        images: {
+            egg: '/beasts/taotie_1_egg.png',
+            baby: '/beasts/taotie_2_baby.png',
+            juvenile: '/beasts/taotie_3_juvenile.png',
+            adult: '/beasts/taotie_4_adult.png',
+            ultimate: '/beasts/taotie_5_ultimate.png',
         },
     },
 ];
