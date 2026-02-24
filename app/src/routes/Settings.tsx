@@ -55,7 +55,7 @@ const DragItem = ({ value, children }: { value: unknown; children: React.ReactNo
       value={value}
       dragListener={false}
       dragControls={controls}
-      className="flex items-center gap-1.5 rounded-2xl bg-white px-2 py-2 md:gap-2 md:px-3"
+      className="flex min-w-0 items-center gap-1.5 overflow-hidden rounded-2xl bg-white px-2 py-2 md:gap-2 md:px-3"
     >
       <span
         className="cursor-grab active:cursor-grabbing text-text-tertiary select-none touch-none"
@@ -212,6 +212,18 @@ const Settings = () => {
     }
   }, [classId])
 
+  // 学生操作后只刷新学生列表（不重新拉 settings/shop）
+  const refreshStudentList = useCallback(async (targetClassId?: string) => {
+    const effectiveClassId = targetClassId || classId
+    if (!effectiveClassId) return
+    try {
+      const studentResult = await CloudApi.studentList({ classId: effectiveClassId })
+      setStudents(normalizeStudents(studentResult.students || []))
+    } catch (error) {
+      console.error("刷新学生列表失败:", error)
+    }
+  }, [classId])
+
   useEffect(() => {
     loadClassList()
   }, [loadClassList])
@@ -306,7 +318,7 @@ const Settings = () => {
         },
       })
       setNewStudentName("")
-      await refresh(effectiveClassId)
+      await refreshStudentList(effectiveClassId)
       showNotice("已添加学生")
     } catch (error) {
       console.error(error)
@@ -358,7 +370,7 @@ const Settings = () => {
         })
       }
       setBatchText("")
-      await refresh(effectiveClassId)
+      await refreshStudentList(effectiveClassId)
       showNotice(`已导入 ${toAdd.length} 名学生`)
     } catch (error) {
       console.error(error)
@@ -406,7 +418,7 @@ const Settings = () => {
         })
       }
       setExcelModalOpen(false)
-      await refresh(effectiveClassId)
+      await refreshStudentList(effectiveClassId)
       showNotice(`已通过 Excel 导入 ${toAdd.length} 名学生`)
     } catch (error) {
       console.error(error)
@@ -427,7 +439,7 @@ const Settings = () => {
     clearNotice()
     try {
       await CloudApi.studentDelete({ studentId })
-      await refresh(classInfo.id || classId)
+      await refreshStudentList(classInfo.id || classId)
       showNotice("已删除学生")
     } catch (error) {
       console.error(error)
@@ -455,7 +467,7 @@ const Settings = () => {
           },
         })
       }
-      await refresh(classInfo.id || classId)
+      await refreshStudentList(classInfo.id || classId)
       showNotice("已为所有学生分配幻兽")
     } catch (error) {
       console.error(error)
@@ -1023,7 +1035,7 @@ const Settings = () => {
                       <input
                         value={rule.icon}
                         onChange={(event) => handleRuleUpdate(rule.id, { icon: event.target.value })}
-                        className="w-10 rounded-xl border border-gray-200 px-1 py-1 text-center md:w-12 md:px-2"
+                        className="w-8 shrink-0 rounded-xl border border-gray-200 px-0.5 py-1 text-center md:w-12 md:px-2"
                       />
                       <input
                         value={rule.name}
@@ -1035,7 +1047,7 @@ const Settings = () => {
                         type="number"
                         value={rule.score || ""}
                         onChange={(event) => handleRuleUpdate(rule.id, { score: Number(event.target.value) })}
-                        className="w-12 shrink-0 rounded-xl border border-gray-200 px-1 py-1 text-center text-sm md:w-20 md:px-2 md:text-left"
+                        className="w-10 shrink-0 rounded-xl border border-gray-200 px-0.5 py-1 text-center text-sm md:w-20 md:px-2 md:text-left"
                       />
                       <button
                         type="button"

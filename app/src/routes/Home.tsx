@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Link } from "react-router-dom"
 
 import BeastPickerModal from "../components/BeastPickerModal"
@@ -6,8 +6,7 @@ import EvolutionCelebration, { type EvolutionEvent } from "../components/Evoluti
 import RevokeBar from "../components/RevokeBar"
 import ScoreModal from "../components/ScoreModal"
 import ShareModal from "../components/ShareModal"
-import { beasts } from "../data/beasts"
-import { getDefaultSettings } from "../data/defaults"
+import { beasts, type Beast } from "../data/beasts"
 import { CloudApi } from "../services/cloudApi"
 import { useAuthStore } from "../stores/authStore"
 import { useClassStore } from "../stores/classStore"
@@ -53,6 +52,8 @@ const Home = () => {
   )
   const { classId, setClass } = useClassStore()
   const isSubAccount = useAuthStore((s) => s.role === "sub")
+  const [hoverBeast, setHoverBeast] = useState<{ beast: Beast; x: number; y: number } | null>(null)
+  const hoverTimeout = useRef<number>(0)
 
   const filteredStudents = useMemo(() => {
     const keyword = search.trim()
@@ -73,61 +74,46 @@ const Home = () => {
     return result
   }, [search, studentList, sortMode])
 
-  const refresh = async (activeClassId?: string) => {
+  const refreshData = async (activeClassId?: string) => {
     if (!activeClassId) {
       setSummary(null)
       setStudentList([])
       return
     }
-    const [summaryResult, studentResult] = await Promise.all([
-      CloudApi.classGet({ classId: activeClassId }),
-      CloudApi.studentList({ classId: activeClassId }),
-    ])
-    setSummary(summaryResult.classSummary ?? null)
-    setStudentList(normalizeStudents(studentResult.students ?? []))
+    const homeResult = await CloudApi.homeData({ classId: activeClassId })
+    setSummary(homeResult.classSummary ?? null)
+    setStudentList(normalizeStudents(homeResult.students ?? []))
 
-    if (summaryResult.classSummary?.id) {
-      setClass(summaryResult.classSummary.id, summaryResult.classSummary.name)
+    // settings 内联在 homeData 中；兜底：旧版云函数未返回 settings 时独立查询
+    if (homeResult.settings !== undefined) {
+      setRules(homeResult.settings?.scoreRules || [])
+    } else {
+      try {
+        const settingsResult = await CloudApi.settingsGet({ classId: activeClassId })
+        setRules(settingsResult.settings?.scoreRules || [])
+      } catch {
+        setRules([])
+      }
     }
 
-    try {
-      const effectiveId = summaryResult.classSummary?.id || activeClassId
-      const settingsResult = await CloudApi.settingsGet({ classId: effectiveId })
-      const remoteRules = settingsResult.settings?.scoreRules
-      if (remoteRules && remoteRules.length > 0) {
-        setRules(remoteRules)
-      } else {
-        const defaults = getDefaultSettings()
-        setRules(defaults.scoreRules)
-        CloudApi.settingsSave({ classId: effectiveId, settings: defaults }).catch(console.error)
-      }
-    } catch (error) {
-      setRules([])
+    if (homeResult.classSummary?.id) {
+      setClass(homeResult.classSummary.id, homeResult.classSummary.name)
     }
   }
 
   useEffect(() => {
-    const connect = async () => {
-      setIsLoading(true)
-      try {
-        await refresh(classId)
-      } catch (error) {
-        setSummary(null)
-        setStudentList([])
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    connect()
-  }, [])
-
-  useEffect(() => {
-    if (classId && classId !== summary?.id) {
-      setStudentList([])
+    if (!classId) {
       setSummary(null)
-      refresh(classId)
+      setStudentList([])
+      setIsLoading(false)
+      return
     }
+    setIsLoading(true)
+    setStudentList([])
+    setSummary(null)
+    refreshData(classId)
+      .catch(() => { setSummary(null); setStudentList([]); setRules([]) })
+      .finally(() => setIsLoading(false))
   }, [classId])
 
   useEffect(() => {
@@ -270,31 +256,16 @@ const Home = () => {
       }
 
       // 2. 刷新并获取新数据
-      const [summaryResult, studentResult] = await Promise.all([
-        CloudApi.classGet({ classId: activeClassId }),
-        CloudApi.studentList({ classId: activeClassId }),
-      ])
-      setSummary(summaryResult.classSummary ?? null)
-      const newStudents = normalizeStudents(studentResult.students ?? [])
+      const homeResult = await CloudApi.homeData({ classId: activeClassId })
+      setSummary(homeResult.classSummary ?? null)
+      const newStudents = normalizeStudents(homeResult.students ?? [])
       setStudentList(newStudents)
-
-      if (summaryResult.classSummary?.id) {
-        setClass(summaryResult.classSummary.id, summaryResult.classSummary.name)
+      if (homeResult.settings !== undefined) {
+        setRules(homeResult.settings?.scoreRules || [])
       }
 
-      try {
-        const effectiveId = summaryResult.classSummary?.id || activeClassId
-        const settingsResult = await CloudApi.settingsGet({ classId: effectiveId })
-        const remoteRules = settingsResult.settings?.scoreRules
-        if (remoteRules && remoteRules.length > 0) {
-          setRules(remoteRules)
-        } else {
-          const defaults = getDefaultSettings()
-          setRules(defaults.scoreRules)
-          CloudApi.settingsSave({ classId: effectiveId, settings: defaults }).catch(console.error)
-        }
-      } catch {
-        setRules([])
+      if (homeResult.classSummary?.id) {
+        setClass(homeResult.classSummary.id, homeResult.classSummary.name)
       }
 
       // 3. 检测进化（仅加分时）
@@ -332,7 +303,7 @@ const Home = () => {
       await CloudApi.scoreRevoke({ recordId: lastRecordId })
       setLastRecordId(null)
       setLastMessage("")
-      await refresh(classId)
+      await refreshData(classId)
     } catch (error) {
       setLastMessage("撤回失败")
     } finally {
@@ -353,7 +324,7 @@ const Home = () => {
         ...(isMaxLevel ? { totalScore: 0, level: 1, progress: 0 } : {}),
       }
       await CloudApi.studentUpsert({ student: studentData })
-      await refresh(classId)
+      await refreshData(classId)
     } finally {
       setIsLoading(false)
     }
@@ -464,6 +435,9 @@ const Home = () => {
       <div className={`mt-6 grid ${isCompact ? "grid-cols-3 gap-1.5" : "grid-cols-2 gap-2"} md:grid-cols-3 md:gap-4 lg:grid-cols-4 xl:grid-cols-5`}>
         {filteredStudents.map((student, index) => {
           const beast = findBeast(student)
+          const collected = (student.collectedBeasts || [])
+            .map((id) => beasts.find((b) => b.id === id))
+            .filter(Boolean) as typeof beasts
           const selected = selectedIds.includes(student.id)
           const stage = getEvolutionStage(student.level)
           const stageName = stageNames[stage]
@@ -501,6 +475,26 @@ const Home = () => {
               {/* 手机端：名字 等级 幻兽名 形态 一行 */}
               <div className={`mb-1 flex items-center gap-1 leading-tight md:hidden ${isCompact ? "text-[9px]" : "text-[10px]"}`}>
                 <span className={`shrink-0 font-bold text-text-primary ${isCompact ? "text-[11px]" : "text-xs"}`}>{student.name}</span>
+                {collected.length > 0 && (
+                  <div className="flex shrink-0 -space-x-1">
+                    {collected.map((b) => (
+                      <img
+                        key={b.id}
+                        src={b.images.ultimate}
+                        alt={b.name}
+                        className={`rounded-full border border-white object-contain bg-amber-50 ${isCompact ? "h-4 w-4" : "h-5 w-5"}`}
+                        onMouseEnter={(e) => {
+                          window.clearTimeout(hoverTimeout.current)
+                          const rect = e.currentTarget.getBoundingClientRect()
+                          setHoverBeast({ beast: b, x: rect.left + rect.width / 2, y: rect.top })
+                        }}
+                        onMouseLeave={() => {
+                          hoverTimeout.current = window.setTimeout(() => setHoverBeast(null), 150)
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
                 <span className={`shrink-0 rounded px-1 py-0.5 font-semibold ${isMaxLevel ? "bg-amber-100 text-amber-700" : "bg-primary/10 text-primary"}`}>
                   {isMaxLevel ? "MAX" : `Lv.${student.level}`}
                 </span>
@@ -509,10 +503,48 @@ const Home = () => {
                     {beast ? `${beast.name}·${isMaxLevel ? "收集完成" : stageName}` : "未领养"}
                   </span>
                 )}
+                {!isSubAccount && !isCompact && (
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      setActiveStudent(student)
+                      setPickerOpen(true)
+                    }}
+                    className={`ml-auto shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold transition-colors ${isMaxLevel
+                      ? "bg-amber-50 text-amber-700"
+                      : "text-text-tertiary hover:text-primary"
+                    }`}
+                  >
+                    {isMaxLevel ? "领养新幻兽" : beast ? "更换" : "领养"}
+                  </button>
+                )}
               </div>
               {/* 桌面端：名字+等级 */}
               <div className="hidden items-center justify-between mb-3 md:flex">
-                <p className="text-base font-bold text-text-primary">{student.name}</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-base font-bold text-text-primary">{student.name}</p>
+                  {collected.length > 0 && (
+                    <div className="flex -space-x-1">
+                      {collected.map((b) => (
+                        <img
+                          key={b.id}
+                          src={b.images.ultimate}
+                          alt={b.name}
+                          className="h-6 w-6 cursor-pointer rounded-full border-2 border-white object-contain bg-amber-50 transition-transform hover:scale-110 hover:z-10"
+                          onMouseEnter={(e) => {
+                            window.clearTimeout(hoverTimeout.current)
+                            const rect = e.currentTarget.getBoundingClientRect()
+                            setHoverBeast({ beast: b, x: rect.left + rect.width / 2, y: rect.top })
+                          }}
+                          onMouseLeave={() => {
+                            hoverTimeout.current = window.setTimeout(() => setHoverBeast(null), 150)
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <span className={`rounded-lg px-2 py-0.5 text-xs font-semibold ${isMaxLevel ? "bg-amber-100 text-amber-700" : "bg-primary/10 text-primary"}`}>
                   {isMaxLevel ? "MAX" : `Lv.${student.level}`}
                 </span>
@@ -560,29 +592,10 @@ const Home = () => {
                 )}
               </div>
 
-              {/* 手机端：未领养或满级时显示领养按钮（紧凑模式隐藏） */}
-              {(isMaxLevel || !beast) && !isSubAccount && !isCompact && (
-                <div className="mt-2 md:hidden">
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      setActiveStudent(student)
-                      setPickerOpen(true)
-                    }}
-                    className={`w-full rounded-lg border px-2 py-1.5 text-xs font-semibold transition-colors ${isMaxLevel
-                      ? "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
-                      : "border-primary/30 bg-primary/5 text-primary hover:bg-primary/10"
-                    }`}
-                  >
-                    {isMaxLevel ? "领养新幻兽" : "领养"}
-                  </button>
-                </div>
-              )}
 
               <div className={`${isCompact ? "mt-1" : "mt-2"} md:mt-3`}>
                 <div className="hidden items-center justify-between text-xs text-text-tertiary mb-1 md:flex">
-                  <span>{isMaxLevel ? "收集完成" : `进度 ${student.progress}%`}</span>
+                  <span>可用积分 {student.availableScore ?? 0}</span>
                   <span>成长值 {student.totalScore}</span>
                 </div>
                 <div className={`${isCompact ? "h-1" : "h-1.5"} w-full rounded-full bg-gray-100 overflow-hidden`}>
@@ -602,6 +615,22 @@ const Home = () => {
         })}
       </div>
 
+      {hoverBeast && (
+        <div
+          className="pointer-events-none fixed z-50 flex flex-col items-center"
+          style={{ left: hoverBeast.x, top: hoverBeast.y, transform: "translate(-50%, -110%)" }}
+        >
+          <div className="rounded-2xl bg-white p-3 shadow-xl border border-gray-100">
+            <img
+              src={hoverBeast.beast.images.ultimate}
+              alt={hoverBeast.beast.name}
+              className="h-32 w-32 object-contain"
+            />
+            <p className="mt-1 text-center text-sm font-semibold text-text-primary">{hoverBeast.beast.name}</p>
+          </div>
+        </div>
+      )}
+
       <ScoreModal
         open={scoreModalOpen}
         onClose={() => setScoreModalOpen(false)}
@@ -613,6 +642,7 @@ const Home = () => {
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
         onSelect={handleAssignBeast}
+        collectedBeasts={activeStudent?.collectedBeasts}
       />
 
       <ShareModal
