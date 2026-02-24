@@ -56,6 +56,8 @@ import type {
   TTWechatCallbackResponse,
   TTWechatBindRequest,
   TTWechatBindResponse,
+  TTHomeDataRequest,
+  TTHomeDataResponse,
 } from "../types/api"
 import type { UserRole } from "../types"
 
@@ -71,28 +73,29 @@ const cache = new Map<string, CacheEntry<unknown>>()
 
 // Per-function TTL configuration (in seconds)
 const CACHE_TTL: Record<string, number> = {
-  TT_class_list: 300,      // 5 minutes – class list rarely changes
-  TT_settings_get: 60,     // 1 minute – might edit on another device
-  TT_student_list: 15,     // 15 seconds – scores change during active sessions
-  TT_shop_list: 60,        // 1 minute – items rarely change mid-session
-  TT_honors_list: 30,      // 30 seconds – derived from student data
-  TT_class_get: 30,        // 30 seconds – class summary
-  TT_redeem_list: 30,      // 30 seconds – redeem records
-  TT_record_summary: 30,   // 30 seconds – stats overview
-  // TT_record_list: 0,    // Don't cache – paginated, params vary
+  TT_class_list: 300,      // 5 min – class list rarely changes
+  TT_settings_get: 120,    // 2 min – invalidated on save
+  TT_student_list: 30,     // 30s – invalidated after score/redeem ops
+  TT_shop_list: 120,       // 2 min – invalidated on save
+  TT_honors_list: 60,      // 1 min – invalidated after score ops
+  TT_class_get: 60,        // 1 min – invalidated after score ops
+  TT_redeem_list: 60,      // 1 min – invalidated after redeem ops
+  TT_record_summary: 60,   // 1 min – invalidated after score ops
+  TT_home_data: 60,        // 1 min – combined class+students; invalidated after mutations
+  TT_record_list: 30,      // 30s – invalidated after score ops
 }
 
 // Write operation → cache keys to invalidate
 const INVALIDATION_MAP: Record<string, string[]> = {
-  TT_settings_save: ["TT_settings_get"],
+  TT_settings_save: ["TT_settings_get", "TT_home_data"],
   TT_shop_save: ["TT_shop_list"],
-  TT_student_upsert: ["TT_student_list", "TT_honors_list", "TT_class_get"],
-  TT_student_delete: ["TT_student_list", "TT_honors_list", "TT_class_get"],
-  TT_score_batch: ["TT_student_list", "TT_honors_list", "TT_class_get", "TT_record_list", "TT_record_summary"],
-  TT_score_revoke: ["TT_student_list", "TT_honors_list", "TT_class_get", "TT_record_list", "TT_record_summary"],
-  TT_shop_redeem: ["TT_student_list", "TT_redeem_list", "TT_shop_list"],
-  TT_class_upsert: ["TT_class_list", "TT_class_get"],
-  TT_class_delete: ["TT_class_list"], // + all keys for deleted classId
+  TT_student_upsert: ["TT_student_list", "TT_honors_list", "TT_class_get", "TT_home_data"],
+  TT_student_delete: ["TT_student_list", "TT_honors_list", "TT_class_get", "TT_home_data"],
+  TT_score_batch: ["TT_student_list", "TT_honors_list", "TT_class_get", "TT_record_list", "TT_record_summary", "TT_home_data"],
+  TT_score_revoke: ["TT_student_list", "TT_honors_list", "TT_class_get", "TT_record_list", "TT_record_summary", "TT_home_data"],
+  TT_shop_redeem: ["TT_student_list", "TT_redeem_list", "TT_shop_list", "TT_home_data"],
+  TT_class_upsert: ["TT_class_list", "TT_class_get", "TT_home_data"],
+  TT_class_delete: ["TT_class_list", "TT_home_data"], // + all keys for deleted classId
   TT_group_manage: ["TT_honors_list"], // for save action
 }
 
@@ -146,6 +149,12 @@ const cachedCall = async <TData extends object, TResult>(
 const getToken = () => useAuthStore.getState().token
 
 export const CloudApi = {
+  homeData: async (data?: TTHomeDataRequest) => {
+    return cachedCall<TTHomeDataRequest & { token?: string }, TTHomeDataResponse>(
+      "TT_home_data",
+      { ...data, token: getToken() } as TTHomeDataRequest & { token?: string }
+    )
+  },
   classGet: async (data?: TTClassGetRequest) => {
     return cachedCall<TTClassGetRequest & { token?: string }, TTClassGetResponse>(
       "TT_class_get",
@@ -206,7 +215,7 @@ export const CloudApi = {
     )
   },
   recordList: async (data: TTRecordListRequest) => {
-    return callCloudFunction<TTRecordListRequest & { token: string }, TTRecordListResponse>(
+    return cachedCall<TTRecordListRequest & { token: string }, TTRecordListResponse>(
       "TT_record_list",
       { ...data, token: getToken() }
     )
@@ -283,6 +292,24 @@ export const CloudApi = {
     }>(
       "TT_auth_activate",
       data
+    )
+  },
+  authReset: async (data: { username: string; code: string; newPassword: string }) => {
+    return callCloudFunction<typeof data, {
+      token: string
+      username: string
+      role?: UserRole
+      nickname?: string
+      canRedeem?: boolean
+    }>(
+      "TT_auth_reset",
+      data
+    )
+  },
+  authLookupUsername: async (data: { code: string }) => {
+    return callCloudFunction<{ action: "lookup"; code: string }, { username: string }>(
+      "TT_auth_reset",
+      { action: "lookup", code: data.code }
     )
   },
   activationStats: async () => {

@@ -17,6 +17,16 @@ export interface TTClassGetRequest {
   classId?: string
 }
 
+export interface TTHomeDataRequest {
+  classId?: string
+}
+
+export interface TTHomeDataResponse {
+  classSummary: ClassSummary | null
+  students: Student[]
+  settings?: ClassSettings | null
+}
+
 export interface TTClassListResponse {
   classes: ClassInfo[]
 }
