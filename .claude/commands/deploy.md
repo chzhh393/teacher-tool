@@ -11,7 +11,7 @@
 
 1. 在 `app/` 目录执行 `npm run build`
 2. 使用 MCP `uploadFiles` 工具将 `app/dist` 上传到 `/`
-3. 提供访问地址：`https://cloud1-3g9mi825a3a27f25-1368265332.tcloudbaseapp.com/?v=当前日期`
+3. 提供访问地址：`https://learn-fun.cn/?v=当前日期`
 
 ## 部署云函数
 
