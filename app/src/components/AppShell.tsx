@@ -8,6 +8,8 @@ import { useClassStore } from "../stores/classStore"
 import type { ClassInfo } from "../types"
 import { applyTheme } from "../config/theme"
 import Modal from "./Modal"
+import ToolDock from "./ToolDock"
+import ToolOverlay from "./ToolOverlay"
 
 const allNavItems = [
   { label: "班级主页", to: "/", mainOnly: false },
@@ -20,37 +22,39 @@ const allNavItems = [
 const AppShell = () => {
   const [classModalOpen, setClassModalOpen] = useState(false)
   const [classes, setClasses] = useState<ClassInfo[]>([])
+  const [activeToolId, setActiveToolId] = useState<string | null>(null)
   const { classId, className, setClass, clearClass } = useClassStore()
   const { username, token, role, nickname, clearAuth } = useAuthStore()
   const isSubAccount = role === "sub"
   const navItems = allNavItems.filter((item) => !item.mainOnly || !isSubAccount)
 
+  // 加载班级列表（仅 token 变化时）
   useEffect(() => {
-    const load = async () => {
-      try {
-        if (!token) {
-          setClasses([])
-          return
-        }
-        const result = await CloudApi.classList()
+    if (!token) {
+      setClasses([])
+      return
+    }
+    CloudApi.classList()
+      .then((result) => {
         setClasses(result.classes || [])
         if (!classId && result.classes?.length) {
           const first = result.classes[0]
           setClass(first.id, first.name)
         }
-        if (classId || result.classes?.length) {
-          const activeId = classId || result.classes[0].id
-          const settings = await CloudApi.settingsGet({ classId: activeId })
-          applyTheme(settings.settings?.themeColor || "coral")
-        }
-      } catch (error) {
+      })
+      .catch((error) => {
         console.error("云开发连接失败", error)
         setClasses([])
-      }
-    }
+      })
+  }, [token])
 
-    load()
-  }, [classId, setClass, token])
+  // 加载主题色（classId 变化时）
+  useEffect(() => {
+    if (!classId) return
+    CloudApi.settingsGet({ classId })
+      .then((settings) => applyTheme(settings.settings?.themeColor || "coral"))
+      .catch(() => {})
+  }, [classId])
 
   const handleLogout = async () => {
     if (token) {
@@ -127,18 +131,29 @@ const AppShell = () => {
               </button>
             </div>
 
-            <NavLink
-              to="/updates"
-              className={({ isActive }) =>
-                `hidden rounded-xl px-3 py-2 text-sm font-semibold transition-all md:inline-flex ${
-                  isActive
-                    ? "bg-primary/10 text-primary shadow-sm"
-                    : "bg-white/70 text-text-secondary hover:bg-white hover:text-text-primary"
-                }`
-              }
-            >
-              更新日志
-            </NavLink>
+            <div className="hidden md:flex items-center rounded-xl bg-white/70 text-sm font-semibold text-text-secondary">
+              <a
+                href="https://yiolg9aex7.feishu.cn/wiki/VbCGw1MsgiYunBkrWpecRuejnev"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-2.5 py-1.5 rounded-l-xl transition-all hover:bg-white hover:text-text-primary"
+              >
+                帮助中心
+              </a>
+              <span className="w-px h-4 bg-gray-200" />
+              <NavLink
+                to="/updates"
+                className={({ isActive }) =>
+                  `px-2.5 py-1.5 rounded-r-xl transition-all ${
+                    isActive
+                      ? "bg-primary/10 text-primary"
+                      : "hover:bg-white hover:text-text-primary"
+                  }`
+                }
+              >
+                更新日志
+              </NavLink>
+            </div>
           </div>
         </div>
       </header>
@@ -150,6 +165,12 @@ const AppShell = () => {
           </Suspense>
         </ChunkErrorBoundary>
       </main>
+
+      {/* 右侧工具 Dock - 仅桌面端 */}
+      <ToolDock onSelectTool={(id) => setActiveToolId(id)} />
+      {activeToolId && (
+        <ToolOverlay toolId={activeToolId} onClose={() => setActiveToolId(null)} />
+      )}
 
       {/* 底部 Tab 导航 - 仅手机端 */}
       <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-gray-200 bg-white/95 backdrop-blur safe-area-bottom md:hidden">
